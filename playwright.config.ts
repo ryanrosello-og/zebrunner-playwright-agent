@@ -7,7 +7,7 @@ const config: PlaywrightTestConfig = {
   use: {
     trace: "on",
   },
-  reporter: [['html'],
+  reporter: [
     [
       "./zebReporter.ts",
       {

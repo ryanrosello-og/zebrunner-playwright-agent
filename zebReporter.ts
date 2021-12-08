@@ -1,29 +1,45 @@
 // playwright.config.ts
-import { Reporter } from '@playwright/test/reporter';
-import ZebAgent from './src/lib/ZebAgent';
+import { FullConfig, Reporter, Suite } from "@playwright/test/reporter";
+import ZebAgent from "./src/lib/ZebAgent";
+import { writeFile } from "fs";
+import * as circleJson from 'circular-json'
 
 class MyReporter implements Reporter {
-  private _zebAgent: ZebAgent
-  onBegin(config, suite) {
-    this._zebAgent = new ZebAgent(config);
-    this._zebAgent.initialize();
-    console.log(`Starting the run with ${suite.allTests().length} tests`);
-    console.log('Suite:', suite)
+  private config!: FullConfig;
+  private suite!: Suite;
+  private _zebAgent: ZebAgent;
+
+  onBegin(config: FullConfig, suite: Suite) {
+    this.config = config;
+    this.suite = suite;
   }
-  
-  onTestBegin(test) {
-    const startTime = new Date().getTime()
-    if(!this._zebAgent.runStarted()) {
-      this._zebAgent.startTestRun({
-        name: test.parent.title,
-        startedAt: new Date(startTime ).toISOString(),
-        framework: 'Playwright',
-        config: {
-          environment: 'PROD',
-        },
-      })
-    }
+
+   onEnd() {
+    const data  = circleJson.stringify(this.suite.suites)
+    // console.log("DATA >>> ", data);
+    writeFile(
+      "./results.json",
+      data,
+      function (err) {
+        if (err) {
+          console.log(err);
+        }
+      }
+    );
   }
+  // onTestBegin(test) {
+  //   const startTime = new Date().getTime()
+  //   if(!this._zebAgent.runStarted()) {
+  //     this._zebAgent.startTestRun({
+  //       name: test.parent.title,
+  //       startedAt: new Date(startTime ).toISOString(),
+  //       framework: 'Playwright',
+  //       config: {
+  //         environment: 'PROD',
+  //       },
+  //     })
+  //   }
+  // }
   //   this._zebAgent.startTestExecution(this._zebAgent.getTestRunId(), {
   //     name: test.title,
   //     className: 'my class',
@@ -34,7 +50,7 @@ class MyReporter implements Reporter {
   //   console.log(`Starting test ${test.title}`);
   //   console.log('Test:', test)
   // }
-  
+
   // onTestEnd(test, result) {
   //   this._zebAgent.finishTestExecution(this._zebAgent.getTestRunId(), this._zebAgent.getTestId(), {
   //     result: result.status,
