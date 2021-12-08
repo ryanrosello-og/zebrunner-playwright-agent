@@ -1,0 +1,13 @@
+{
+  "name": "pw-1.18",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "debug": "playwright test --config ./playwright.config.ts --workers=1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.17.1",
+    "axios": "^0.24.0"
+  }
+}
