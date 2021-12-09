@@ -57,7 +57,7 @@ export default class ResultsParser {
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime).toISOString(),
-          endedAt: new Date(result.startTime + result.duration).toISOString(),
+          endedAt: new Date(new Date(result.startTime).getTime() + result.duration).toISOString(),
           // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
           reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
             result.error?.stack

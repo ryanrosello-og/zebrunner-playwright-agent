@@ -21,24 +21,23 @@ class MyReporter implements Reporter {
   }
 
   async postResultsToZebRunner(testResults) {
+    console.time('Duration');
     let zebAgent = new ZebAgent(this.config);
     await zebAgent.initialize();
-    const d  = new Date()
     for (const testResult of testResults) {
+      let runStartTime = new Date(testResult.testSuite.tests[0].startedAt).getTime() - 1000;
       let r = await zebAgent.startTestRun({
         name: testResult.testSuite.title,
-        startedAt: testResult.testSuite.tests
-          ? testResult.testSuite.tests[0].startedAt
-          : new Date().toISOString(),
+        startedAt: new Date(runStartTime).toISOString(),
         framework: 'Playwright',
         config: {
           environment: 'PROD',
-          build:`${d.getFullYear()}-${d.getMonth()}-${d.getDay()}T${d.getHours()}:${d.getHours()}`
+          build: new Date().toISOString(),
         },
       });
       let testRunId = r.data.id;
 
-      let lastRunTest = '';
+      let runEndTime = '';
       for (const test of testResult.testSuite.tests) {
         let testExecResponse = await zebAgent.startTestExecution(testRunId, {
           name: test.name,
@@ -53,13 +52,14 @@ class MyReporter implements Reporter {
           reason: test.reason,
           endedAt: test.endedAt,
         });
-        lastRunTest = test.endedAt;
+        runEndTime = test.endedAt; // end time will be last assignment
       }
 
       await zebAgent.finishTestRun(testRunId, {
-        endedAt: lastRunTest,
+        endedAt: runEndTime,
       });
     }
+    console.timeEnd('Duration');
   }
 }
 export default MyReporter;
