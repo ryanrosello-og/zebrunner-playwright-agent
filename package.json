@@ -4,6 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
+    "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
     "debug": "playwright test --config ./playwright.config.ts --workers=1"
   },
   "devDependencies": {

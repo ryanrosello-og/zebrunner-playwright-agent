@@ -30,7 +30,7 @@ export default class Urls {
   urlSendLogs(testRunId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/logs`;
   }
-  
+
   urlSendScreenShot(testRunId: string, testId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
   }

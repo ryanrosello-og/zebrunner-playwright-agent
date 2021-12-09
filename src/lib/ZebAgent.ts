@@ -1,4 +1,4 @@
-import { AxiosResponse } from 'axios';
+import {AxiosResponse} from 'axios';
 import Logger from '../lib/Logger';
 import Api from './Api';
 import Urls from './Urls';
@@ -6,13 +6,15 @@ import Urls from './Urls';
 export default class ZebAgent {
   private _refreshToken: string;
   private _header: any;
-  private _urls: Urls
+  private _urls: Urls;
   private _accessToken: string;
 
   constructor(config) {
-    const zebRunnerConf = config.reporter.filter(f => f[0].includes('zeb')||f[1]?.includes('zeb'))
-    this._accessToken = zebRunnerConf[0][1].apiKey
-    this._urls = new Urls(zebRunnerConf[0][1].projectKey,zebRunnerConf[0][1].reporterBaseUrl)
+    const zebRunnerConf = config.reporter.filter(
+      (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
+    );
+    this._accessToken = zebRunnerConf[0][1].apiKey;
+    this._urls = new Urls(zebRunnerConf[0][1].projectKey, zebRunnerConf[0][1].reporterBaseUrl);
   }
 
   async initialize(): Promise<void> {
@@ -25,13 +27,9 @@ export default class ZebAgent {
         Authorization: this._refreshToken,
       },
     };
-    Logger.log(
-      `initialize complete: obtained refreshToken ${this._refreshToken}`
-    );
+    Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken}`);
     Logger.log(`BASE_URL => ${process.env.BASE_URL}`);
-    Logger.log(
-      `ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`,
-    );
+    Logger.log(`ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`);
     Logger.log(`PROJECT_KEY => ${process.env.PROJECT_KEY}`);
   }
 
@@ -57,8 +55,8 @@ export default class ZebAgent {
       startedAt: string;
       maintainer?: string;
       testCase?: string;
-      labels?: { key: string; value: string }[];
-    },
+      labels?: {key: string; value: string}[];
+    }
   ): Promise<AxiosResponse> {
     let r = await Api.post(this._urls.urlStartTest(testRunId), payload, this._header);
     return r;
@@ -71,13 +69,9 @@ export default class ZebAgent {
       result: 'PASSED' | 'FAILED' | 'ABORTED' | 'SKIPPED';
       reason?: string;
       endedAt?: string;
-    },
+    }
   ): Promise<AxiosResponse> {
-    let r = await Api.put(
-      this._urls.urlFinishTest(testRunId, testId),
-      payload,
-      this._header,
-    );
+    let r = await Api.put(this._urls.urlFinishTest(testRunId, testId), payload, this._header);
     return r;
   }
 
@@ -85,7 +79,7 @@ export default class ZebAgent {
     testRunId: string,
     payload: {
       endedAt: string;
-    },
+    }
   ): Promise<AxiosResponse> {
     let r = await Api.put(this._urls.urlFinishRun(testRunId), payload, this._header);
     return r;

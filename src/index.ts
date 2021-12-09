@@ -1,11 +1,11 @@
 require('dotenv').config();
-import { runPreChecks } from '../src/lib/validator';
+import {runPreChecks} from '../src/lib/validator';
 import ZebAgent from './lib/ZebAgent';
 
 let result = runPreChecks();
 if (result.status === 'failed') {
   throw new Error(
-    `Unable to start app - missing required environment variables: ${result.errorMessage}`,
+    `Unable to start app - missing required environment variables: ${result.errorMessage}`
   );
 }
 

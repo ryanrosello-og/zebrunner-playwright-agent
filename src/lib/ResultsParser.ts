@@ -1,77 +1,108 @@
-
 export default class ResultsParser {
-  private _resultsData: any
-  private _result:any[]
+  private _resultsData: any;
+  private _result: any[];
 
   constructor(results) {
     this._result = [];
-    this._resultsData = results
+    this._resultsData = results;
     console.log(this._resultsData);
   }
 
   async getParsedResults() {
-    return this._result
+    return this._result;
   }
 
   async parse() {
-    for(const testSuite of this._resultsData.suites[0].suites) {
-      await this.parseTestSuite(testSuite)
+    for (const testSuite of this._resultsData.suites[0].suites) {
+      await this.parseTestSuite(testSuite);
     }
   }
-  
-  
+
   async parseTestSuite(suite, suiteIndex = 0) {
-    if(suite.suites?.length > 0) {
-      await this.parseTest(suite, suite.tests)
-      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++)
+    let testResults = [];
+    if (suite.suites?.length > 0) {
+      testResults = await this.parseTests(suite.tests);
+      this.updateResults({
+        testSuite: {
+          title: suite.title,
+          tests: testResults,
+        },
+      });
+      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++);
     } else {
-      await this.parseTest(suite, suite.tests)
+      testResults = await this.parseTests(suite.tests);
+      this.updateResults({
+        testSuite: {
+          title: suite.title,
+          tests: testResults,
+        },
+      });
       return;
     }
   }
-  async parseTest(suite, tests) {
-    for(const test of tests) {
-      let r = await this.parseTestResult(suite,test)
-      this._result.push(r)
+
+  updateResults(data) {
+    if (data.testSuite.tests.length > 0) {
+      this._result.push(data);
     }
   }
 
-  async parseTestResult(suite, test) {
-    let testResults = []
-    for(const result of test.results) {
-      testResults.push({
-        name: test.title,
-        status: this.determineStatus(result.status),
-        retry: result.retry,
-        startedAt: new Date(result.startTime).toISOString(),
-        endedAt: new Date(result.startTime+result.duration).toISOString(),
-        // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
-        reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(result.error?.stack)}`
-      })
-    }
+  async parseTests(tests) {
+    let testResults = [];
 
-    return {
-      testSuite:{
-        title:suite.title,
-        tests:testResults
+    for (const test of tests) {
+      for (const result of test.results) {
+        testResults.push({
+          name: test.title,
+          status: this.determineStatus(result.status),
+          retry: result.retry,
+          startedAt: new Date(result.startTime).toISOString(),
+          endedAt: new Date(result.startTime + result.duration).toISOString(),
+          // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
+          reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
+            result.error?.stack
+          )}`,
+        });
       }
     }
+    return testResults;
   }
 
+  // async parseTestResult(test) {
+  //   let testResults = [];
+  //   for (const result of test.results) {
+  //     testResults.push({
+  //       name: test.title,
+  //       status: this.determineStatus(result.status),
+  //       retry: result.retry,
+  //       startedAt: new Date(result.startTime).toISOString(),
+  //       endedAt: new Date(result.startTime + result.duration).toISOString(),
+  //       // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
+  //       reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
+  //         result.error?.stack
+  //       )}`,
+  //     });
+  //   }
+  //   return testResults;
+  // }
+
   cleanseReason(rawReason) {
-    return rawReason ? rawReason.replace(/\u001b\[2m/g,'').replace(/\u001b\[22m/g,'').replace(/\u001b\[31m/g,'').replace(/\u001b\[39m/g,'') :''
+    return rawReason
+      ? rawReason
+          .replace(/\u001b\[2m/g, '')
+          .replace(/\u001b\[22m/g, '')
+          .replace(/\u001b\[31m/g, '')
+          .replace(/\u001b\[39m/g, '')
+          .replace(/\u001b\[32m/g, '')
+          .replace(/\u001b\[27m/g, '')
+          .replace(/\u001b\[7m/g, '')
+      : '';
   }
 
   determineStatus(status) {
-    if(status==='failed')
-      return 'FAILED'
-    else if(status ==='passed')
-      return 'PASSED'
-    else if(status==='skipped')
-      return 'SKIPPED'
-    else
-      return 'ABORTED'
+    if (status === 'failed') return 'FAILED';
+    else if (status === 'passed') return 'PASSED';
+    else if (status === 'skipped') return 'SKIPPED';
+    else return 'ABORTED';
   }
-
-
 }
