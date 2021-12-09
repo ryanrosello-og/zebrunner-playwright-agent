@@ -14,7 +14,7 @@ export default class ResultsParser {
   }
 
   async parse() {
-    for(const testSuite of this._resultsData.suites) {
+    for(const testSuite of this._resultsData.suites[0].suites) {
       await this.parseTestSuite(testSuite)
     }
   }
@@ -40,7 +40,6 @@ export default class ResultsParser {
     let testResults = []
     for(const result of test.results) {
       testResults.push({
-        suite: suite.title,
         name: test.title,
         status: this.determineStatus(result.status),
         retry: result.retry,
@@ -50,11 +49,17 @@ export default class ResultsParser {
         reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(result.error?.stack)}`
       })
     }
-    return testResults
+
+    return {
+      testSuite:{
+        title:suite.title,
+        tests:testResults
+      }
+    }
   }
 
   cleanseReason(rawReason) {
-    return rawReason.replace(/\u001b\[2m/g,'').replace(/\u001b\[22m/g,'').replace(/\u001b\[31m/g,'').replace(/\u001b\[39m/g,'')
+    return rawReason ? rawReason.replace(/\u001b\[2m/g,'').replace(/\u001b\[22m/g,'').replace(/\u001b\[31m/g,'').replace(/\u001b\[39m/g,'') :''
   }
 
   determineStatus(status) {

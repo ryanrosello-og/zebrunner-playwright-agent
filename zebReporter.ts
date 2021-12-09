@@ -13,44 +13,49 @@ class MyReporter implements Reporter {
   }
 
   async onEnd() {
-    let resultsParser = new ResultsParser(this.suite)
+    let resultsParser = new ResultsParser(this.suite);
     await resultsParser.parse();
     let r = await resultsParser.getParsedResults();
-    console.log(r)
-    // await postResultsToZebrunner(results)
+    console.log(r);
+    await this.postResultsToZebRunner(r)
   }
 
-  async postResultsToZebrunner(data) {
+  async postResultsToZebRunner(testResults) {
     let zebAgent = new ZebAgent(this.config);
-    const startTime = new Date().getTime() - 10000;
     await zebAgent.initialize();
-    let r = await zebAgent.startTestRun({
-      name: 'meh',
-      startedAt: new Date(startTime + 1000).toISOString(),
-      framework: 'Playwright',
-      config: {
-        environment: 'PROD',
-      },
-    });
-    const testRunId = r.data.id;
+    for (const testResult of testResults) {
+      let r = await zebAgent.startTestRun({
+        name: testResult.testSuite.title,
+        startedAt: testResult.testSuite.tests ? testResult.testSuite.tests[0].startedAt: new Date().toISOString(),
+        framework: "Playwright",
+        config: {
+          environment: "PROD",
+        },
+      });
+      const testRunId = r.data.id;
+      
+      let lastRunTest = ''
+      for (const test of testResult.testSuite.tests) {
+        let testExecResponse = await zebAgent.startTestExecution(testRunId, {
+          name: test.name,
+          className: "TODO",
+          methodName: "TODO",
+          startedAt: test.startedAt,
+        });
+        let testId = testExecResponse.data.id;
   
-    let testExecResponse = await zebAgent.startTestExecution(testRunId, {
-      name: 'my test',
-      className: 'my class',
-      methodName: 'meh',
-      startedAt: new Date(startTime + 2000).toISOString(),
-    });
-    let testId = testExecResponse.data.id;
-  
-    await zebAgent.finishTestExecution(testRunId, testId, {
-      result: 'FAILED',
-      reason: 'test falied bla',
-      endedAt: new Date(startTime + 3000).toISOString(),
-    });
-  
-    await zebAgent.finishTestRun(testRunId, {
-      endedAt: new Date(startTime + 4000).toISOString(),
-    });
+        await zebAgent.finishTestExecution(testRunId, testId, {
+          result: test.status,
+          reason: test.reason,
+          endedAt: test.endedAt,
+        });
+        lastRunTest = test.endedAt
+      }
+
+      await zebAgent.finishTestRun(testRunId, {
+        endedAt: lastRunTest,
+      });
+    }
   }
 }
 export default MyReporter;
