@@ -85,7 +85,22 @@ export default class ZebAgent {
     return r;
   }
 
-  // TODO
-  // sendLogs
-  // send screenshots
+  async attachScreenshot(
+    testRunId: string,
+    testId: string,
+    imagePath: string
+  ): Promise<AxiosResponse> {
+    // https://stackoverflow.com/questions/39663961/how-do-you-send-images-to-node-js-with-axios
+    let data = new FormData();
+    data.append('file', file, file.name);
+    let r = await Api.post(this._urls.urlScreenshots(testRunId, testId), null, {
+      headers: {
+        Authorization: this._refreshToken,
+        accept: 'application/json',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
+      },
+    });
+    return r;
+  }
 }

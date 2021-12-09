@@ -6,6 +6,7 @@ const config: PlaywrightTestConfig = {
   retries: process.env.CI ? 2 : 0,
   use: {
     trace: 'on',
+    screenshot: 'only-on-failure',
   },
   reporter: [
     [

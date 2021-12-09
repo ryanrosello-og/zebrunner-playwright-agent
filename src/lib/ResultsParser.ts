@@ -62,6 +62,7 @@ export default class ResultsParser {
           reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
             result.error?.stack
           )}`,
+          attachment: this.processAttachment(result.attachments),
         });
       }
     }
@@ -97,6 +98,18 @@ export default class ResultsParser {
           .replace(/\u001b\[27m/g, '')
           .replace(/\u001b\[7m/g, '')
       : '';
+  }
+
+  processAttachment(attachment) {
+    if (attachment) {
+      let screenshot = attachment.filter((a) => a.contentType === 'image/png');
+      if (screenshot.length > 0) {
+        // TODO: there could be more than one screenshot?
+        return screenshot[0].path;
+      } else {
+        return null;
+      }
+    }
   }
 
   determineStatus(status) {
