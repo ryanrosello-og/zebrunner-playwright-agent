@@ -90,6 +90,20 @@ export default class ZebAgent {
     testId: string,
     imagePath: string
   ): Promise<AxiosResponse> {
+    //  https://maximorlov.com/send-a-file-with-axios-in-nodejs/
+     /*
+     const form = new FormData();
+
+// File parsed by multer from incoming request
+const file = req.file;
+form.append('file', file.buffer, file.originalname);
+
+// or read from disk
+const file = await fs.readFile('./my-image.jpg');
+form.append('file', file, 'my-image.jpg');
+     */
+      
+      
     // https://stackoverflow.com/questions/39663961/how-do-you-send-images-to-node-js-with-axios
     let data = new FormData();
     data.append('file', file, file.name);
