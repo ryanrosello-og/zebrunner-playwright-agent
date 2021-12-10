@@ -2,6 +2,7 @@ import {AxiosResponse} from 'axios';
 import Logger from '../lib/Logger';
 import Api from './Api';
 import Urls from './Urls';
+import {readFileSync} from 'fs';
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -90,29 +91,13 @@ export default class ZebAgent {
     testId: string,
     imagePath: string
   ): Promise<AxiosResponse> {
-    //  https://maximorlov.com/send-a-file-with-axios-in-nodejs/
-     /*
-     const form = new FormData();
+    if (!imagePath) return;
 
-// File parsed by multer from incoming request
-const file = req.file;
-form.append('file', file.buffer, file.originalname);
-
-// or read from disk
-const file = await fs.readFile('./my-image.jpg');
-form.append('file', file, 'my-image.jpg');
-     */
-      
-      
-    // https://stackoverflow.com/questions/39663961/how-do-you-send-images-to-node-js-with-axios
-    let data = new FormData();
-    data.append('file', file, file.name);
-    let r = await Api.post(this._urls.urlScreenshots(testRunId, testId), null, {
+    const file = readFileSync(imagePath);
+    let r = await Api.post(this._urls.urlScreenshots(testRunId, testId), Buffer.from(file), {
       headers: {
         Authorization: this._refreshToken,
-        accept: 'application/json',
-        'Accept-Language': 'en-US,en;q=0.8',
-        'Content-Type': `multipart/form-data; boundary=${data._boundary}`,
+        'Content-Type': 'image/png',
       },
     });
     return r;

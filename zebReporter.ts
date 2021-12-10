@@ -52,6 +52,8 @@ class MyReporter implements Reporter {
           reason: test.reason,
           endedAt: test.endedAt,
         });
+
+        await zebAgent.attachScreenshot(testRunId, testId, test.attachment);
         runEndTime = test.endedAt; // end time will be last assignment
       }
 
