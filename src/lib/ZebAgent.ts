@@ -9,13 +9,17 @@ export default class ZebAgent {
   private _header: any;
   private _urls: Urls;
   private _accessToken: string;
+  private _projectKey: string;
+  private _reportBaseUrl: string;
 
   constructor(config) {
     const zebRunnerConf = config.reporter.filter(
       (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
     );
     this._accessToken = zebRunnerConf[0][1].apiKey;
-    this._urls = new Urls(zebRunnerConf[0][1].projectKey, zebRunnerConf[0][1].reporterBaseUrl);
+    this._projectKey = zebRunnerConf[0][1].projectKey;
+    this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
+    this._urls = new Urls(this._projectKey, this._reportBaseUrl);
   }
 
   async initialize(): Promise<void> {
@@ -29,9 +33,9 @@ export default class ZebAgent {
       },
     };
     Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken}`);
-    Logger.log(`BASE_URL => ${process.env.BASE_URL}`);
+    Logger.log(`BASE_URL => ${this._reportBaseUrl}`);
     Logger.log(`ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`);
-    Logger.log(`PROJECT_KEY => ${process.env.PROJECT_KEY}`);
+    Logger.log(`PROJECT_KEY => ${this._projectKey}`);
   }
 
   async startTestRun(payload: {
