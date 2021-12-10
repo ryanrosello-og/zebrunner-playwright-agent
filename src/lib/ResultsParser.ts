@@ -106,10 +106,9 @@ export default class ResultsParser {
       if (screenshot.length > 0) {
         // TODO: there could be more than one screenshot?
         return screenshot[0].path;
-      } else {
-        return null;
       }
     }
+    return null;
   }
 
   determineStatus(status) {

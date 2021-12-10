@@ -2,6 +2,7 @@
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './src/lib/ZebAgent';
 import ResultsParser from './src/lib/ResultsParser';
+//import {PromisePool} from '@supercharge/promise-pool';
 
 class MyReporter implements Reporter {
   private config!: FullConfig;
@@ -38,6 +39,7 @@ class MyReporter implements Reporter {
       let testRunId = r.data.id;
 
       let runEndTime = '';
+      let testsWithAttachments = [];
       for (const test of testResult.testSuite.tests) {
         let testExecResponse = await zebAgent.startTestExecution(testRunId, {
           name: test.name,
@@ -53,8 +55,19 @@ class MyReporter implements Reporter {
           endedAt: test.endedAt,
         });
 
-        await zebAgent.attachScreenshot(testRunId, testId, test.attachment);
+        if (test.attachment !== null) {
+          testsWithAttachments.push({testId, attachment: test.attachment});
+        }
         runEndTime = test.endedAt; // end time will be last assignment
+      }
+
+      // upload tests that have attachments
+      for (const testsWithAttachment of testsWithAttachments) {
+        await zebAgent.attachScreenshot(
+          testRunId,
+          testsWithAttachment.testId,
+          testsWithAttachment.attachment
+        );
       }
 
       await zebAgent.finishTestRun(testRunId, {
