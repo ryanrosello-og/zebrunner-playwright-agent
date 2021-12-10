@@ -51,6 +51,7 @@ export default class ResultsParser {
     let testResults = [];
 
     for (const test of tests) {
+      let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
       for (const result of test.results) {
         testResults.push({
           name: test.title,
@@ -63,29 +64,12 @@ export default class ResultsParser {
             result.error?.stack
           )}`,
           attachment: this.processAttachment(result.attachments),
+          browser: browser,
         });
       }
     }
     return testResults;
   }
-
-  // async parseTestResult(test) {
-  //   let testResults = [];
-  //   for (const result of test.results) {
-  //     testResults.push({
-  //       name: test.title,
-  //       status: this.determineStatus(result.status),
-  //       retry: result.retry,
-  //       startedAt: new Date(result.startTime).toISOString(),
-  //       endedAt: new Date(result.startTime + result.duration).toISOString(),
-  //       // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
-  //       reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
-  //         result.error?.stack
-  //       )}`,
-  //     });
-  //   }
-  //   return testResults;
-  // }
 
   cleanseReason(rawReason) {
     return rawReason
