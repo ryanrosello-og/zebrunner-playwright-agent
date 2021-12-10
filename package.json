@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.17.1",
+    "@supercharge/promise-pool": "^2.0.0",
     "axios": "^0.24.0",
     "prettier": "^2.5.1"
   }
