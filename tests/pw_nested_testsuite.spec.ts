@@ -1,7 +1,7 @@
 import {test, expect, Page} from '@playwright/test';
 const {firefox} = require('playwright');
 test.describe('nested foo', () => {
-  test('test runnin in Firery fox @ff', async () => {
+  test('test runnin in Firery fox @ff @smoke_test @slow', async () => {
     const browser = await firefox.launch();
     const page = await browser.newPage();
     await page.goto('https://example.com');

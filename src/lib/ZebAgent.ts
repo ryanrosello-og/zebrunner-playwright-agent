@@ -108,6 +108,16 @@ export default class ZebAgent {
     return r;
   }
 
+  async addTestTags(testRunId: string, testId: string, items: any[]): Promise<AxiosResponse> {
+    if (!items) return;
+
+    let payload = {
+      items,
+    };
+    let r = await Api.put(this._urls.urlTestExecutionLabel(testRunId, testId), payload, this._header);
+    return r;
+  }
+
   // this sends browser type to ZebRunner
   async startTestSession(options: {
     browser: string;
@@ -130,11 +140,7 @@ export default class ZebAgent {
       testIds: options.testIds,
     };
 
-    let r = await Api.post(this._urls.urlStartSession(options.testRunId), payload, {
-      headers: {
-        Authorization: this._refreshToken,
-      },
-    });
+    let r = await Api.post(this._urls.urlStartSession(options.testRunId), payload, this._header);
     return r;
   }
 
@@ -149,11 +155,7 @@ export default class ZebAgent {
       testIds: testIds,
     };
 
-    let r = await Api.put(this._urls.urlFinishSession(testRunId, sessionId), payload, {
-      headers: {
-        Authorization: this._refreshToken,
-      },
-    });
+    let r = await Api.put(this._urls.urlFinishSession(testRunId, sessionId), payload, this._header);
     return r;
   }
 }

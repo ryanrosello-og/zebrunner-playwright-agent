@@ -53,6 +53,8 @@ class MyReporter implements Reporter {
           let testId = testExecResponse.data.id;
           testIds.push({testId, browser: test.browser});
 
+          await zebAgent.addTestTags(testRunId, testId, test.tags);
+
           await zebAgent.finishTestExecution(testRunId, testId, {
             result: test.status,
             reason: test.reason,

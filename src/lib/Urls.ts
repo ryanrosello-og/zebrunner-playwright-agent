@@ -39,6 +39,14 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
   }
 
+  urlTestExecutionLabel(testRunId: string, testId: string) {
+    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/labels`;
+  }
+
+  urlTestExecutionArtifact(testRunId: string, testId: string) {
+    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/artifact-references`;
+  }
+
   urlSendLogs(testRunId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/logs`;
   }

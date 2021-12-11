@@ -55,6 +55,7 @@ export default class ResultsParser {
       for (const result of test.results) {
         testResults.push({
           name: test.title,
+          tags: this.getTestTags(test.title),
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime).toISOString(),
@@ -82,6 +83,15 @@ export default class ResultsParser {
           .replace(/\u001b\[27m/g, '')
           .replace(/\u001b\[7m/g, '')
       : '';
+  }
+
+  getTestTags(testTitle) {
+    let tags = testTitle.match(/@\w*/g);
+
+    if (tags) {
+      return tags.map((c) => ({key: 'tag', value: c.replace('@', '')}));
+    }
+    return null;
   }
 
   processAttachment(attachment) {
