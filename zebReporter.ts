@@ -37,6 +37,12 @@ class MyReporter implements Reporter {
         },
       });
       let testRunId = r.data.id;
+      await zebAgent.addTestRunTags(testRunId, [
+        {
+          key: "group",
+          value: "Regression"
+        }
+      ]);
 
       let runEndTime = '';
       let testsWithAttachments = [];

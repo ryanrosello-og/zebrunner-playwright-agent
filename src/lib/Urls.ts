@@ -31,6 +31,10 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions`;
   }
 
+  urlTestRunLabel(testRunId: string) {
+    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/labels`;
+  }
+
   urlFinishSession(testRunId: string, sessionId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions/${sessionId}`;
   }

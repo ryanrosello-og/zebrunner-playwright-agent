@@ -118,6 +118,16 @@ export default class ZebAgent {
     return r;
   }
 
+  async addTestRunTags(testRunId: string, items: any[]): Promise<AxiosResponse> {
+    if (!items) return;
+
+    let payload = {
+      items,
+    };
+    let r = await Api.put(this._urls.urlTestRunLabel(testRunId), payload, this._header);
+    return r;
+  }
+
   // this sends browser type to ZebRunner
   async startTestSession(options: {
     browser: string;
