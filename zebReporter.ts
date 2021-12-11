@@ -25,8 +25,8 @@ class MyReporter implements Reporter {
     console.time('Duration');
     let zebAgent = new ZebAgent(this.config);
     await zebAgent.initialize();
+    let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
     for (const testResult of testResults) {
-      let runStartTime = new Date(testResult.testSuite.tests[0].startedAt).getTime() - 1000;
       let r = await zebAgent.startTestRun({
         name: testResult.testSuite.title,
         startedAt: new Date(runStartTime).toISOString(),
@@ -40,6 +40,7 @@ class MyReporter implements Reporter {
 
       let runEndTime = '';
       let testsWithAttachments = [];
+      let testIds = [];
       const {results, errors} = await PromisePool.withConcurrency(10)
         .for(testResult.testSuite.tests)
         .process(async (test, index, pool) => {
@@ -50,6 +51,7 @@ class MyReporter implements Reporter {
             startedAt: test.startedAt,
           });
           let testId = testExecResponse.data.id;
+          testIds.push({testId, browser: test.browser});
 
           await zebAgent.finishTestExecution(testRunId, testId, {
             result: test.status,
@@ -71,6 +73,21 @@ class MyReporter implements Reporter {
           testsWithAttachment.attachment
         );
       }
+
+      // set the browser type
+      let sess = await zebAgent.startTestSession({
+        browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
+        startedAt: new Date(runStartTime).toISOString(),
+        testRunId: testRunId,
+        testIds: testIds.map((t) => t.testId),
+      });
+
+      await zebAgent.finishTestSession(
+        sess.data.id,
+        testRunId,
+        new Date(runStartTime + 1).toISOString(),
+        testIds.map((t) => t.testId)
+      );
 
       await zebAgent.finishTestRun(testRunId, {
         endedAt: runEndTime,

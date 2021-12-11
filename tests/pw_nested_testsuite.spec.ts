@@ -1,5 +1,13 @@
-import {test, expect} from '@playwright/test';
+import {test, expect, Page} from '@playwright/test';
+const {firefox} = require('playwright');
 test.describe('nested foo', () => {
+  test('test runnin in Firery fox @ff', async () => {
+    const browser = await firefox.launch();
+    const page = await browser.newPage();
+    await page.goto('https://example.com');
+    await browser.close();
+  });
+
   test.describe('foo - l2 ', () => {
     test.beforeEach(async ({page}) => {
       // Go to the starting url before each test.

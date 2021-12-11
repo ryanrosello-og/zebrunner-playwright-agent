@@ -3,6 +3,7 @@ import Logger from '../lib/Logger';
 import Api from './Api';
 import Urls from './Urls';
 import {readFileSync} from 'fs';
+import {randomUUID} from 'crypto';
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -102,6 +103,55 @@ export default class ZebAgent {
       headers: {
         Authorization: this._refreshToken,
         'Content-Type': 'image/png',
+      },
+    });
+    return r;
+  }
+
+  // this sends browser type to ZebRunner
+  async startTestSession(options: {
+    browser: string;
+    startedAt: string;
+    testRunId: string;
+    testIds: string[];
+  }): Promise<AxiosResponse> {
+    let payload = {
+      sessionId: randomUUID(),
+      initiatedAt: options.startedAt,
+      startedAt: options.startedAt,
+      desiredCapabilities: {
+        browserName: options.browser,
+        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+      },
+      capabilities: {
+        browserName: options.browser,
+        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+      },
+      testIds: options.testIds,
+    };
+
+    let r = await Api.post(this._urls.urlStartSession(options.testRunId), payload, {
+      headers: {
+        Authorization: this._refreshToken,
+      },
+    });
+    return r;
+  }
+
+  async finishTestSession(
+    sessionId: string,
+    testRunId: string,
+    endedAt: string,
+    testIds: string[]
+  ): Promise<AxiosResponse> {
+    let payload = {
+      endedAt: endedAt,
+      testIds: testIds,
+    };
+
+    let r = await Api.put(this._urls.urlFinishSession(testRunId, sessionId), payload, {
+      headers: {
+        Authorization: this._refreshToken,
       },
     });
     return r;

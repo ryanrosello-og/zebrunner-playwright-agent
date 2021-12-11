@@ -27,6 +27,14 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}`;
   }
 
+  urlStartSession(testRunId: string) {
+    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions`;
+  }
+
+  urlFinishSession(testRunId: string, sessionId: string) {
+    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions/${sessionId}`;
+  }
+
   urlScreenshots(testRunId: string, testId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
   }
