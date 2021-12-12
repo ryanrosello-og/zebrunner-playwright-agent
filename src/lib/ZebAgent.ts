@@ -17,16 +17,22 @@ export default class ZebAgent {
     const zebRunnerConf = config.reporter.filter(
       (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
     );
-    this._accessToken = zebRunnerConf[0][1].apiKey;
+    this._accessToken = process.env.ZEB_API_KEY;
     this._projectKey = zebRunnerConf[0][1].projectKey;
     this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
     this._urls = new Urls(this._projectKey, this._reportBaseUrl);
   }
 
   async initialize(): Promise<void> {
-    let r = await Api.post(this._urls.urlRefresh(), {
+    const payload = {
       refreshToken: this._accessToken,
-    });
+    };
+    let r = await Api.post(this._urls.urlRefresh(), payload);
+    if (r.status !== 200) {
+      throw new Error(`Failed to obtain an auth token, request was ${this._urls.urlRefresh()} with payload: ${payload} \n 
+      Ensure you have provided a value Auth token via ENV variable "ZEB_API_KEY"`);
+    }
+
     this._refreshToken = `Bearer ${r.data.authToken}`;
     this._header = {
       headers: {
@@ -114,7 +120,11 @@ export default class ZebAgent {
     let payload = {
       items,
     };
-    let r = await Api.put(this._urls.urlTestExecutionLabel(testRunId, testId), payload, this._header);
+    let r = await Api.put(
+      this._urls.urlTestExecutionLabel(testRunId, testId),
+      payload,
+      this._header
+    );
     return r;
   }
 

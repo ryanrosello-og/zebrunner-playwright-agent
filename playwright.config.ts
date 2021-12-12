@@ -26,12 +26,10 @@ const config: PlaywrightTestConfig = {
     [
       './zebReporter.ts',
       {
-        apiKey: 'J9nSSKlzAvRolNhFdeKEIcDkgvaHtZxfOSdrQkkQAAiEYznROo',
         reporterBaseUrl: 'https://default.zebrunner.com',
         projectKey: 'DEF',
       },
     ],
-    ['html'],
   ],
 };
 export default config;
