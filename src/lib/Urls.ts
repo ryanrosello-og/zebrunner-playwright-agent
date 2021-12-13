@@ -23,7 +23,7 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests`;
   }
 
-  urlFinishTest(testRunId: string, testId: string) {
+  urlFinishTest(testRunId: number, testId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}`;
   }
 

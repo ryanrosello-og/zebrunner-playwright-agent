@@ -75,8 +75,8 @@ export default class ZebAgent {
   }
 
   async finishTestExecution(
-    testRunId: string,
-    testId: string,
+    testRunId: number,
+    testId: number,
     payload: {
       result: 'PASSED' | 'FAILED' | 'ABORTED' | 'SKIPPED';
       reason?: string;

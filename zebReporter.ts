@@ -1,7 +1,7 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './src/lib/ZebAgent';
-import ResultsParser from './src/lib/ResultsParser';
+import ResultsParser, {testResult} from './src/lib/ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 
 class MyReporter implements Reporter {
@@ -33,89 +33,13 @@ class MyReporter implements Reporter {
     let testRunTags = await this.addTestRunTags(testRuns);
     let allTests = testRuns.map((t) => t.tests).flat(1);
 
-    let x = await this.startTestExecutions(allTests);
+    let testsExecutions = await this.startTestExecutions(allTests);
+    let testTags = await this.addTestTags(testsExecutions.results);
+    let screenshots = await this.addScreenshots(testsExecutions.results);
+    let z = await this.finishTestExecutions(testsExecutions.results);
 
-    await this.finishTestExecutions(x)
+    let stopTestRunsResult = await this.stopTestRuns(testRuns, new Date().toISOString());
 
-    // TODO: set this properly
-    let runEndTime = new Date().toISOString();
-    let stopTestRunsResult = await this.stopTestRuns(testRuns, runEndTime);
-
-    // for (const testResult of testResults) {
-    //   let r = await zebAgent.startTestRun({
-    //     name: testResult.testSuite.title,
-    //     startedAt: new Date(runStartTime).toISOString(),
-    //     framework: 'Playwright',
-    //     config: {
-    //       environment: 'PROD',
-    //       build: new Date().toISOString(),
-    //     },
-    //   });
-    //   let testRunId = r.data.id;
-    //   await zebAgent.addTestRunTags(testRunId, [
-    //     {
-    //       key: "group",
-    //       value: "Regression"
-    //     }
-    //   ]);
-
-    //   let runEndTime = '';
-    //   let testsWithAttachments = [];
-    //   let testIds = [];
-    //   const {results, errors} = await PromisePool.withConcurrency(10)
-    //     .for(testResult.testSuite.tests)
-    //     .process(async (test, index, pool) => {
-    //       let testExecResponse = await zebAgent.startTestExecution(testRunId, {
-    //         name: test.name,
-    //         className: 'TODO',
-    //         methodName: 'TODO',
-    //         startedAt: test.startedAt,
-    //       });
-    //       let testId = testExecResponse.data.id;
-    //       testIds.push({testId, browser: test.browser});
-
-    //       await zebAgent.addTestTags(testRunId, testId, test.tags);
-
-    //       await zebAgent.finishTestExecution(testRunId, testId, {
-    //         result: test.status,
-    //         reason: test.reason,
-    //         endedAt: test.endedAt,
-    //       });
-
-    //       if (test.attachment !== null) {
-    //         testsWithAttachments.push({testId, attachment: test.attachment});
-    //       }
-    //       runEndTime = test.endedAt; // end time will be last assignment
-    //     });
-
-    //   // upload tests that have attachments
-    //   for (const testsWithAttachment of testsWithAttachments) {
-    //     await zebAgent.attachScreenshot(
-    //       testRunId,
-    //       testsWithAttachment.testId,
-    //       testsWithAttachment.attachment
-    //     );
-    //   }
-
-    //   // set the browser type
-    //   let sess = await zebAgent.startTestSession({
-    //     browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
-    //     startedAt: new Date(runStartTime).toISOString(),
-    //     testRunId: testRunId,
-    //     testIds: testIds.map((t) => t.testId),
-    //   });
-
-    //   await zebAgent.finishTestSession(
-    //     sess.data.id,
-    //     testRunId,
-    //     new Date(runStartTime + 1).toISOString(),
-    //     testIds.map((t) => t.testId)
-    //   );
-
-    //   await zebAgent.finishTestRun(testRunId, {
-    //     endedAt: runEndTime,
-    //   });
-    // }
     console.timeEnd('Duration');
   }
 
@@ -170,6 +94,28 @@ class MyReporter implements Reporter {
     return {results, errors};
   }
 
+  async addTestTags(tests) {
+    const {results, errors} = await PromisePool.withConcurrency(10)
+      .for(tests)
+      .process(async (test, index, pool) => {
+        let r = await this.zebAgent.addTestTags(test.testRunId, test.testId, test.tags);
+        return {r};
+      });
+
+    return {results, errors};
+  }
+
+  async addScreenshots(tests) {
+    const {results, errors} = await PromisePool.withConcurrency(10)
+      .for(tests)
+      .process(async (test, index, pool) => {
+        let r = await this.zebAgent.attachScreenshot(test.testRunId, test.testId, test.attachment);
+        return {r};
+      });
+
+    return {results, errors};
+  }
+
   async startTestExecutions(tests) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(tests)
@@ -181,22 +127,36 @@ class MyReporter implements Reporter {
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;
-        return {testId, ...test as {}};
+        return {testId, ...(test as {})};
       });
     return {results, errors};
   }
 
-  async finishTestExecutions(tests) {
+  async finishTestExecutions(tests: testResult[]) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(tests)
-      .process(async (test, index, pool) => {
-        let r = await zebAgent.finishTestExecution(test.testRunId, test.testId, {
+      .process(async (test: testResult, index, pool) => {
+        let r = await this.zebAgent.finishTestExecution(test.testRunId, test.testId, {
           result: test.status,
           reason: test.reason,
           endedAt: test.endedAt,
         });
 
         return r;
+      });
+    return {results, errors};
+  }
+
+  async startTestSessions(fn, tests) {
+    const {results, errors} = await PromisePool.withConcurrency(10)
+      .for(tests)
+      .process(async (test, index, pool) => {
+        let sess = await fn({
+          browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
+          startedAt: new Date(runStartTime).toISOString(),
+          testRunId: testRunId,
+          testIds: testIds.map((t) => t.testId),
+        });
       });
     return {results, errors};
   }

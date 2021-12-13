@@ -1,3 +1,20 @@
+export type testResult = {
+  name: string;
+  testId?: number;
+  testRunId?: number;
+  attachment?: string;
+  browser: string;
+  endedAt: string;
+  reason: string;
+  retry: number;
+  startedAt: string;
+  status: 'FAILED' | 'PASSED' | 'SKIPPED' | 'ABORTED';
+  tags: {
+    key: string;
+    value: string;
+  }[];
+};
+
 export default class ResultsParser {
   private _resultsData: any;
   private _result: any[];
@@ -48,7 +65,7 @@ export default class ResultsParser {
   }
 
   async parseTests(tests) {
-    let testResults = [];
+    let testResults: testResult[] = [];
 
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
