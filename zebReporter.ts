@@ -1,9 +1,10 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './src/lib/ZebAgent';
-import ResultsParser, {testResult} from './src/lib/ResultsParser';
+import ResultsParser, {testResult, testSuite} from './src/lib/ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 
+type testRun = {title: string; tests: testResult[]; testRunId: number};
 class MyReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
@@ -23,7 +24,7 @@ class MyReporter implements Reporter {
     await this.postResultsToZebRunner(r);
   }
 
-  async postResultsToZebRunner(testResults) {
+  async postResultsToZebRunner(testResults: testSuite[]) {
     console.time('Duration');
     await this.zebAgent.initialize();
     let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
@@ -43,7 +44,7 @@ class MyReporter implements Reporter {
     console.timeEnd('Duration');
   }
 
-  async startTestRuns(runStartTime, testResults) {
+  async startTestRuns(runStartTime: number, testResults: testSuite[]): Promise<testRun[]> {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(testResults)
       .process(async (testResult, index, pool) => {
@@ -57,7 +58,6 @@ class MyReporter implements Reporter {
           },
         });
         let testRunId = r.data.id;
-        // testResult.testSuite.tests.map(t => ({...t, testRunId}))
         testResult.testSuite.tests.forEach((t) => (t['testRunId'] = testRunId));
         return {testRunId, ...testResult.testSuite};
       });
@@ -65,10 +65,10 @@ class MyReporter implements Reporter {
     return results;
   }
 
-  async stopTestRuns(testRuns, runEndTime) {
+  async stopTestRuns(testRuns: testRun[], runEndTime: string) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(testRuns)
-      .process(async (testRun, index, pool) => {
+      .process(async (testRun: testRun, index, pool) => {
         await this.zebAgent.finishTestRun(testRun.testRunId, {
           endedAt: runEndTime,
         });
@@ -77,10 +77,10 @@ class MyReporter implements Reporter {
     return {results, errors};
   }
 
-  async addTestRunTags(testRuns) {
+  async addTestRunTags(testRuns: testRun[]) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(testRuns)
-      .process(async (testRun, index, pool) => {
+      .process(async (testRun: testRun, index, pool) => {
         await this.zebAgent.addTestRunTags(testRun.testRunId, [
           {
             key: 'group',
@@ -95,7 +95,7 @@ class MyReporter implements Reporter {
   async addTestTags(tests) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(tests)
-      .process(async (test, index, pool) => {
+      .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.addTestTags(test.testRunId, test.testId, test.tags);
         return {r};
       });
@@ -106,7 +106,7 @@ class MyReporter implements Reporter {
   async addScreenshots(tests) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(tests)
-      .process(async (test, index, pool) => {
+      .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.attachScreenshot(test.testRunId, test.testId, test.attachment);
         return {r};
       });
@@ -117,7 +117,7 @@ class MyReporter implements Reporter {
   async startTestExecutions(tests) {
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(tests)
-      .process(async (test, index, pool) => {
+      .process(async (test: testResult, index, pool) => {
         let testExecResponse = await this.zebAgent.startTestExecution(test.testRunId, {
           name: test.name,
           className: 'TODO',
@@ -125,7 +125,7 @@ class MyReporter implements Reporter {
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;
-        return {testId, ...(test as {})};
+        return {testId, ...test};
       });
     return {results, errors};
   }
@@ -145,7 +145,7 @@ class MyReporter implements Reporter {
     return {results, errors};
   }
 
-  async sendTestSessions(runStartTime, testResults) {
+  async sendTestSessions(runStartTime: number, testResults) {
     const groupBy = (array, key) => {
       return array.reduce((result, currentValue) => {
         (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
@@ -156,17 +156,17 @@ class MyReporter implements Reporter {
     const testSuitesGrouped = groupBy(testResults, 'testRunId');
     const {results, errors} = await PromisePool.withConcurrency(10)
       .for(Object.entries(testSuitesGrouped))
-      .process(async (suite, index, pool) => {
+      .process(async (suite: [string, testResult[]], index, pool) => {
         let sess = await this.zebAgent.startTestSession({
           browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
           startedAt: new Date(runStartTime).toISOString(),
-          testRunId: suite[0],
+          testRunId: Number(suite[0]),
           testIds: suite[1].map((t) => t.testId),
         });
 
         let r = await this.zebAgent.finishTestSession(
           sess.data.id,
-          suite[0],
+          Number(suite[0]),
           new Date(runStartTime + 1).toISOString(),
           suite[1].map((t) => t.testId)
         );

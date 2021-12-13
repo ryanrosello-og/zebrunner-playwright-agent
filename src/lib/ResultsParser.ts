@@ -15,9 +15,17 @@ export type testResult = {
   }[];
 };
 
+export type testSuite = {
+  testSuite: {
+    title: string;
+    tests: testResult[];
+    testRunId?: number;
+  };
+};
+
 export default class ResultsParser {
   private _resultsData: any;
-  private _result: any[];
+  private _result: testSuite[];
 
   constructor(results) {
     this._result = [];
@@ -25,7 +33,7 @@ export default class ResultsParser {
     console.log(this._resultsData);
   }
 
-  async getParsedResults() {
+  async getParsedResults(): Promise<testSuite[]> {
     return this._result;
   }
 

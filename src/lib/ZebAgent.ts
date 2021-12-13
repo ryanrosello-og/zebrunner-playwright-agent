@@ -13,7 +13,7 @@ export default class ZebAgent {
   private _projectKey: string;
   private _reportBaseUrl: string;
 
-  constructor(config) {
+  constructor(config: {reporter: any[]}) {
     const zebRunnerConf = config.reporter.filter(
       (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
     );
@@ -59,7 +59,7 @@ export default class ZebAgent {
   }
 
   async startTestExecution(
-    testRunId: string,
+    testRunId: number,
     payload: {
       name: string;
       className: string;
@@ -88,7 +88,7 @@ export default class ZebAgent {
   }
 
   async finishTestRun(
-    testRunId: string,
+    testRunId: number,
     payload: {
       endedAt: string;
     }
@@ -98,9 +98,9 @@ export default class ZebAgent {
   }
 
   async attachScreenshot(
-    testRunId: string,
-    testId: string,
-    imagePath: string
+    testRunId?: number,
+    testId?: number,
+    imagePath?: string
   ): Promise<AxiosResponse> {
     if (!imagePath) return;
 
@@ -114,7 +114,7 @@ export default class ZebAgent {
     return r;
   }
 
-  async addTestTags(testRunId: string, testId: string, items: any[]): Promise<AxiosResponse> {
+  async addTestTags(testRunId: number, testId: number, items: any[]): Promise<AxiosResponse> {
     if (!items) return;
 
     let payload = {
@@ -128,7 +128,7 @@ export default class ZebAgent {
     return r;
   }
 
-  async addTestRunTags(testRunId: string, items: any[]): Promise<AxiosResponse> {
+  async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {
     if (!items) return;
 
     let payload = {
@@ -142,8 +142,8 @@ export default class ZebAgent {
   async startTestSession(options: {
     browser: string;
     startedAt: string;
-    testRunId: string;
-    testIds: string[];
+    testRunId: number;
+    testIds: number[];
   }): Promise<AxiosResponse> {
     let payload = {
       sessionId: randomUUID(),
@@ -166,9 +166,9 @@ export default class ZebAgent {
 
   async finishTestSession(
     sessionId: string,
-    testRunId: string,
+    testRunId: number,
     endedAt: string,
-    testIds: string[]
+    testIds: number[]
   ): Promise<AxiosResponse> {
     let payload = {
       endedAt: endedAt,

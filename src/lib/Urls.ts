@@ -15,11 +15,11 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs?projectKey=${this._projectKey}`;
   }
 
-  urlFinishRun(testRunId: string) {
+  urlFinishRun(testRunId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}`;
   }
 
-  urlStartTest(testRunId: string) {
+  urlStartTest(testRunId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests`;
   }
 
@@ -27,35 +27,35 @@ export default class Urls {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}`;
   }
 
-  urlStartSession(testRunId: string) {
+  urlStartSession(testRunId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions`;
   }
 
-  urlTestRunLabel(testRunId: string) {
+  urlTestRunLabel(testRunId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/labels`;
   }
 
-  urlFinishSession(testRunId: string, sessionId: string) {
+  urlFinishSession(testRunId: number, sessionId: string) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions/${sessionId}`;
   }
 
-  urlScreenshots(testRunId: string, testId: string) {
+  urlScreenshots(testRunId: number, testId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
   }
 
-  urlTestExecutionLabel(testRunId: string, testId: string) {
+  urlTestExecutionLabel(testRunId: number, testId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/labels`;
   }
 
-  urlTestExecutionArtifact(testRunId: string, testId: string) {
+  urlTestExecutionArtifact(testRunId: number, testId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/artifact-references`;
   }
 
-  urlSendLogs(testRunId: string) {
+  urlSendLogs(testRunId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/logs`;
   }
 
-  urlSendScreenShot(testRunId: string, testId: string) {
+  urlSendScreenShot(testRunId: number, testId: number) {
     return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
   }
 }

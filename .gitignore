@@ -104,3 +104,4 @@ dist
 .tern-port
 playwright-report/
 test-results/
+build/
