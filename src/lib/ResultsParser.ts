@@ -44,26 +44,25 @@ export default class ResultsParser {
     }
   }
 
-  async parseTestSuite(suite, subSuiteName = '', suiteIndex = 0) {
+  async parseTestSuite(suite, suiteIndex = 0) {
     let testResults = [];
     if (suite.suites?.length > 0) {
       testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
         testSuite: {
-          title: subSuiteName ? subSuiteName : suite.title,
+          title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
           tests: testResults,
         },
       });
       await this.parseTestSuite(
         suite.suites[suiteIndex],
-        `${suite.title} > ${subSuiteName}`,
         suiteIndex++
       );
     } else {
       testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
         testSuite: {
-          title: subSuiteName ? subSuiteName : suite.title,
+          title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
           tests: testResults,
         },
       });
