@@ -23,7 +23,7 @@ Modify your playwright config by enabling the reporter:
 
 Run your tests by providing your Zebrunner API_KEY as an environment variable:
 
-ZEB_API_KEY=[your zebrunner api key] npx playwright test
+`ZEB_API_KEY=[your zebrunner api key] npx playwright test`
 
 # Configuration
 
