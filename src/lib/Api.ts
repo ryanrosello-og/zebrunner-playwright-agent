@@ -1,6 +1,5 @@
 import Logger from './Logger';
-import axios from 'axios';
-import {AxiosResponse} from 'axios';
+import axios, {AxiosResponse} from 'axios';
 
 export default class Api {
   public static post(url: string, payload: any, config?: any): Promise<AxiosResponse> {

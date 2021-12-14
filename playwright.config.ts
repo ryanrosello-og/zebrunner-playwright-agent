@@ -24,7 +24,7 @@ const config: PlaywrightTestConfig = {
   ],
   reporter: [
     [
-      './zebReporter.ts',
+      './src/lib/zebReporter.ts',
       {
         reporterBaseUrl: 'https://default.zebrunner.com',
         projectKey: 'DEF',

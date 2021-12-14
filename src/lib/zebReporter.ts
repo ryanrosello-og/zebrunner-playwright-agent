@@ -1,7 +1,7 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
-import ZebAgent from './src/lib/ZebAgent';
-import ResultsParser, {testResult, testSuite} from './src/lib/ResultsParser';
+import ZebAgent from './ZebAgent';
+import ResultsParser, {testResult, testSuite} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 
 type testRun = {title: string; tests: testResult[]; testRunId: number};

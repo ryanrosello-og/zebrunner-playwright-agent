@@ -1,6 +1,6 @@
 {
   "name": "pw-1.18",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
@@ -9,9 +9,11 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.17.1",
-    "@supercharge/promise-pool": "^2.0.0",
-    "axios": "^0.24.0",
     "playwright": "^1.17.1",
     "prettier": "^2.5.1"
+  },
+  "dependencies": {
+    "@supercharge/promise-pool": "^2.0.0",
+    "axios": "^0.24.0"
   }
 }
