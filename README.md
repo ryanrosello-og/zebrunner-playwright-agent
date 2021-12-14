@@ -33,7 +33,7 @@ ZEB_API_KEY=[your zebrunner api key] BUILD_INFO=559340345,smoke_tests npx playwr
 
 You can further customize the reporter by overriding these values:
 
-* concurrentTasks - [defaults to 10]
+* concurrentTasks - [defaults to 10] - instructs the reporter on how many concurrent requests will be made to Zebrunner in order to speed up the posting of the results
 * 
 
 # Contribution
