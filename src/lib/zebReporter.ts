@@ -5,7 +5,7 @@ import ResultsParser, {testResult, testSuite} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 
 type testRun = {title: string; tests: testResult[]; testRunId: number};
-class MyReporter implements Reporter {
+class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
   private zebAgent: ZebAgent;
@@ -176,4 +176,4 @@ class MyReporter implements Reporter {
     return {results, errors};
   }
 }
-export default MyReporter;
+export default ZebrunnerReporter;
