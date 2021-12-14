@@ -120,8 +120,8 @@ class ZebRunnerReporter implements Reporter {
       .process(async (test: testResult, index, pool) => {
         let testExecResponse = await this.zebAgent.startTestExecution(test.testRunId, {
           name: test.name,
-          className: 'TODO',
-          methodName: 'TODO',
+          className: test.suiteName,
+          methodName: test.name,
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;

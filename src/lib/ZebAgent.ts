@@ -41,14 +41,16 @@ export default class ZebAgent {
         Authorization: this._refreshToken,
       },
     };
-    Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken.substring(0, 10)}*****}`);
+    Logger.log(
+      `initialize complete: obtained refreshToken ${this._refreshToken.substring(0, 10)}*****}`
+    );
     Logger.log(`BASE_URL => ${this._reportBaseUrl}`);
     Logger.log(`ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`);
     Logger.log(`PROJECT_KEY => ${this._projectKey}`);
   }
 
   public get concurrency() {
-    return this._concurrentTasks
+    return this._concurrentTasks;
   }
 
   async startTestRun(payload: {

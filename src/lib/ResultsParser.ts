@@ -1,4 +1,5 @@
 export type testResult = {
+  suiteName: string;
   name: string;
   testId?: number;
   testRunId?: number;
@@ -43,22 +44,26 @@ export default class ResultsParser {
     }
   }
 
-  async parseTestSuite(suite, suiteIndex = 0) {
+  async parseTestSuite(suite, subSuiteName = '', suiteIndex = 0) {
     let testResults = [];
     if (suite.suites?.length > 0) {
-      testResults = await this.parseTests(suite.tests);
+      testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
         testSuite: {
-          title: suite.title,
+          title: subSuiteName ? subSuiteName : suite.title,
           tests: testResults,
         },
       });
-      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++);
+      await this.parseTestSuite(
+        suite.suites[suiteIndex],
+        `${suite.title} > ${subSuiteName}`,
+        suiteIndex++
+      );
     } else {
-      testResults = await this.parseTests(suite.tests);
+      testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
         testSuite: {
-          title: suite.title,
+          title: subSuiteName ? subSuiteName : suite.title,
           tests: testResults,
         },
       });
@@ -72,13 +77,14 @@ export default class ResultsParser {
     }
   }
 
-  async parseTests(tests) {
+  async parseTests(suiteName, tests) {
     let testResults: testResult[] = [];
 
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
       for (const result of test.results) {
         testResults.push({
+          suiteName: suiteName,
           name: test.title,
           tags: this.getTestTags(test.title),
           status: this.determineStatus(result.status),
