@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "module": "commonjs",
-    "sourceMap": true,
-    "outDir": "src/build",
-    "moduleResolution": "node"
+      "target": "ESNext",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "outDir": "./src/build",
   }
 }
