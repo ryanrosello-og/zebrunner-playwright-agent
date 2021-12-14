@@ -1,9 +1,11 @@
 {
-  "name": "pw-1.18",
-  "version": "1.0.3",
-  "main": "index.js",
+  "name": "zebrunner-playwright-agent",
+  "version": "1.0.6",
+  "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
+    "pretest": "tsc --incremental -p ./tsconfig.json",
+    "test": "playwright test -c ./src/build",
     "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
     "debug": "playwright test --config ./playwright.config.ts --workers=1"
   },
