@@ -12,6 +12,7 @@ export default class ZebAgent {
   private _accessToken: string;
   private _projectKey: string;
   private _reportBaseUrl: string;
+  private _concurrentTasks: number;
 
   constructor(config: {reporter: any[]}) {
     const zebRunnerConf = config.reporter.filter(
@@ -20,6 +21,7 @@ export default class ZebAgent {
     this._accessToken = process.env.ZEB_API_KEY;
     this._projectKey = zebRunnerConf[0][1].projectKey;
     this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
+    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || 10;
     this._urls = new Urls(this._projectKey, this._reportBaseUrl);
   }
 
@@ -39,10 +41,14 @@ export default class ZebAgent {
         Authorization: this._refreshToken,
       },
     };
-    Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken}`);
+    Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken.substring(0, 10)}*****}`);
     Logger.log(`BASE_URL => ${this._reportBaseUrl}`);
     Logger.log(`ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`);
     Logger.log(`PROJECT_KEY => ${this._projectKey}`);
+  }
+
+  public get concurrency() {
+    return this._concurrentTasks
   }
 
   async startTestRun(payload: {

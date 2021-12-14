@@ -45,7 +45,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async startTestRuns(runStartTime: number, testResults: testSuite[]): Promise<testRun[]> {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(testResults)
       .process(async (testResult, index, pool) => {
         let r = await this.zebAgent.startTestRun({
@@ -66,7 +66,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async stopTestRuns(testRuns: testRun[], runEndTime: string) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(testRuns)
       .process(async (testRun: testRun, index, pool) => {
         await this.zebAgent.finishTestRun(testRun.testRunId, {
@@ -78,7 +78,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async addTestRunTags(testRuns: testRun[]) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(testRuns)
       .process(async (testRun: testRun, index, pool) => {
         await this.zebAgent.addTestRunTags(testRun.testRunId, [
@@ -93,7 +93,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async addTestTags(tests) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.addTestTags(test.testRunId, test.testId, test.tags);
@@ -104,7 +104,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async addScreenshots(tests) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.attachScreenshot(test.testRunId, test.testId, test.attachment);
@@ -115,7 +115,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async startTestExecutions(tests) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let testExecResponse = await this.zebAgent.startTestExecution(test.testRunId, {
@@ -131,7 +131,7 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async finishTestExecutions(tests: testResult[]) {
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.finishTestExecution(test.testRunId, test.testId, {
@@ -154,7 +154,7 @@ class ZebRunnerReporter implements Reporter {
     };
 
     const testSuitesGrouped = groupBy(testResults, 'testRunId');
-    const {results, errors} = await PromisePool.withConcurrency(10)
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(Object.entries(testSuitesGrouped))
       .process(async (suite: [string, testResult[]], index, pool) => {
         let sess = await this.zebAgent.startTestSession({
@@ -176,4 +176,4 @@ class ZebRunnerReporter implements Reporter {
     return {results, errors};
   }
 }
-export default ZebrunnerReporter;
+export default ZebRunnerReporter;
