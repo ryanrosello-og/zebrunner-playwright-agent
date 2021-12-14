@@ -53,7 +53,7 @@ class ZebRunnerReporter implements Reporter {
           startedAt: new Date(runStartTime).toISOString(),
           framework: 'Playwright',
           config: {
-            environment: 'PROD',
+            environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
             build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
           },
         });
