@@ -27,6 +27,8 @@ Run your tests by providing your Zebrunner API_KEY as an environment variable:
 
 # Configuration
 
+It is highly recommended that you enable screenshot on failure.  This will allow the agent to include screenshots of failures in the reports.
+
 Optionally, you can define an additional Environment variable in the CLI
 
 * BUILD_INFO - test suites will be tagged with the provided comma separated values 
