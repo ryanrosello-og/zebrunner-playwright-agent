@@ -38,6 +38,10 @@ export default class ZebAgent {
       expectedStatusCode: 200,
     });
 
+    if (!r) {
+      throw new Error('Failed to obtain refresh token');
+    }
+
     this._refreshToken = `Bearer ${r.data.authToken}`;
     this._header = {
       headers: {

@@ -24,8 +24,8 @@ export default class Api {
         ? `POST *attempt[${attempt}] ${this.shortenUrl(options.url)}`
         : `POST ${this.shortenUrl(options.url)}`
     );
-    if (attempt !== 0) {
-      this.wait(this._delayPerAttempt);
+    if (attempt >= 0) {
+      await this.wait(this._delayPerAttempt);
     }
 
     try {
@@ -40,12 +40,13 @@ export default class Api {
             config: options.config,
             expectedStatusCode: options.expectedStatusCode,
           },
-          attempt + 1
+          isNaN(attempt) ? 0 : attempt + 1
         );
       }
     } catch (e) {
       if (attempt === this._maxAttempts) {
-        throw new Error(`${e.message} \n ${e.stack}`);
+        console.log(`${e.message} \n ${e.stack}`);
+        return;
       } else {
         await this.post(
           {
@@ -54,7 +55,7 @@ export default class Api {
             config: options.config,
             expectedStatusCode: options.expectedStatusCode,
           },
-          attempt + 1
+          isNaN(attempt) ? 0 : attempt + 1
         );
       }
     }
@@ -74,8 +75,8 @@ export default class Api {
         ? `PUT *attempt[${attempt}] ${this.shortenUrl(options.url)}`
         : `PUT ${this.shortenUrl(options.url)}`
     );
-    if (attempt !== 0) {
-      this.wait(this._delayPerAttempt);
+    if (attempt > 0) {
+      await this.wait(this._delayPerAttempt);
     }
 
     try {
@@ -90,12 +91,13 @@ export default class Api {
             config: options.config,
             expectedStatusCode: options.expectedStatusCode,
           },
-          attempt + 1
+          isNaN(attempt) ? 0 : attempt + 1
         );
       }
     } catch (e) {
       if (attempt === this._maxAttempts) {
-        return new Error(`${e.message} \n ${e.stack}`);
+        console.log(`${e.message} \n ${e.stack}`);
+        return;
       } else {
         await this.put(
           {
@@ -104,7 +106,7 @@ export default class Api {
             config: options.config,
             expectedStatusCode: options.expectedStatusCode,
           },
-          attempt + 1
+          isNaN(attempt) ? 0 : attempt + 1
         );
       }
     }
