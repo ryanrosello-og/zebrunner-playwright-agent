@@ -17,6 +17,8 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async onEnd() {
+    await this.zebAgent.initialize();
+
     let resultsParser = new ResultsParser(this.suite);
     await resultsParser.parse();
     let r = await resultsParser.getParsedResults();
@@ -26,12 +28,11 @@ class ZebRunnerReporter implements Reporter {
 
   async postResultsToZebRunner(testResults: testSuite[]) {
     console.time('Duration');
-    await this.zebAgent.initialize();
     let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
     let testRuns = await this.startTestRuns(runStartTime, testResults);
     console.log('testRuns >>', testRuns);
 
-    let testRunTags = await this.addTestRunTags(testRuns);
+    let testRunTags = await this.addTestRunTags(testRuns); // broke - labels does not appear in the UI
     let allTests = testRuns.map((t) => t.tests).flat(1);
 
     let testsExecutions = await this.startTestExecutions(allTests);

@@ -54,10 +54,7 @@ export default class ResultsParser {
           tests: testResults,
         },
       });
-      await this.parseTestSuite(
-        suite.suites[suiteIndex],
-        suiteIndex++
-      );
+      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++);
     } else {
       testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
