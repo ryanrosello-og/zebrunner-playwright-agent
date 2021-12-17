@@ -1,15 +1,16 @@
 # pw-zeb 
 
+Publish Playwright test results directly to Zebrunner after the completion of all test suite execution.
 
 # Setup
 
-run the following:
+Run the following:
 
-`yarn add zebrunner-playwright-agent`
+`yarn add zebrunner-playwright-agent -D`
 
-Modify your playwright config by enabling the reporter:
+Modify your playwright config by enabling the reporter.  You will need to update the `reporterBaseUrl` and `projectKey` keys to match your account.
 
-```
+```json
   reporter: [
     [
       './node_modules/zebrunner-playwright-agent/src/build/src/lib/zebReporter.js',
@@ -27,7 +28,17 @@ Run your tests by providing your Zebrunner API_KEY as an environment variable:
 
 # Configuration
 
-It is highly recommended that you enable screenshot on failure.  This will allow the agent to include screenshots of failures in the reports.
+It is highly recommended that you enable the screenshot on failure feature in your `playwright.config.ts` config file:
+
+```json
+  use: {
+    ...
+    screenshot: 'only-on-failure',
+    ...
+  },
+```
+
+This will allow the agent to include screenshots of failures in the reports.
 
 Optionally, you can define an additional Environment variable in the CLI
 
