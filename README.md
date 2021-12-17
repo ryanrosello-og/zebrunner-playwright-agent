@@ -1,15 +1,16 @@
 # pw-zeb 
 
+Publish Playwright test results directly to Zebrunner after the completion of all test suite execution.
 
 # Setup
 
-run the following:
+Run the following:
 
-`yarn add zebrunner-playwright-agent`
+`yarn add zebrunner-playwright-agent -D`
 
-Modify your playwright config by enabling the reporter:
+Modify your playwright config by enabling the reporter.  You will need to update the `reporterBaseUrl` and `projectKey` keys to match your account.
 
-```
+```json
   reporter: [
     [
       './node_modules/zebrunner-playwright-agent/src/build/src/lib/zebReporter.js',
@@ -27,6 +28,18 @@ Run your tests by providing your Zebrunner API_KEY as an environment variable:
 
 # Configuration
 
+It is highly recommended that you enable the screenshot on failure feature in your `playwright.config.ts` config file:
+
+```json
+  use: {
+    ...
+    screenshot: 'only-on-failure',
+    ...
+  },
+```
+
+This will allow the agent to include screenshots of failures in the reports.
+
 Optionally, you can define an additional Environment variable in the CLI
 
 * BUILD_INFO - test suites will be tagged with the provided comma separated values 
@@ -38,8 +51,12 @@ The example below will classify the `smoke_tests` as having run in the `dev` env
 
 You can further customize the reporter by overriding these values:
 
-* concurrentTasks - [defaults to 10] - instructs the reporter on how many concurrent requests will be made to Zebrunner in order to speed up the posting of the results
-
+| Config          | Default | Description                                                                                                                                                                                 |   |
+|-----------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
+| enabled         | true    | When this key is set to false, the agent will not post results to Zebrunner.                                                                                                                |   |
+| concurrentTasks | 10      | Instructs the reporter on how many concurrent requests will be made to Zebrunner in order to speed up the posting of the results.  The maximum allowable number of parallel requests is 20. |   |
+| reporterBaseUrl |         | The base url for your Zebrunner instance                                                                                                                                                    |   |
+| projectKey      |         | The Zebrunner project key.  e.g. DEF                                                                                                                                                        |   |
 
 # Contribution
 

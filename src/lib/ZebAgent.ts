@@ -4,6 +4,7 @@ import Api from './Api';
 import Urls from './Urls';
 import {readFileSync} from 'fs';
 import {randomUUID} from 'crypto';
+import {testStep} from './ResultsParser';
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -13,6 +14,10 @@ export default class ZebAgent {
   private _projectKey: string;
   private _reportBaseUrl: string;
   private _concurrentTasks: number;
+  private _enabled: boolean;
+  private _api: Api;
+  private readonly _defaultConcurrentTask = 10;
+  private readonly _maximumConcurrentTask = 20;
 
   constructor(config: {reporter: any[]}) {
     const zebRunnerConf = config.reporter.filter(
@@ -21,18 +26,36 @@ export default class ZebAgent {
     this._accessToken = process.env.ZEB_API_KEY;
     this._projectKey = zebRunnerConf[0][1].projectKey;
     this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
-    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || 10;
+
+    if (zebRunnerConf[0][1].enabled) {
+      this._enabled = true;
+    } else {
+      this._enabled = false;
+    }
+
+    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || this._defaultConcurrentTask;
+
+    if (this._concurrentTasks > this._maximumConcurrentTask) {
+      this._concurrentTasks = this._maximumConcurrentTask;
+    }
+
     this._urls = new Urls(this._projectKey, this._reportBaseUrl);
+    this._api = new Api(2, 1000);
   }
 
-  async initialize(): Promise<void> {
+  async initialize() {
     const payload = {
       refreshToken: this._accessToken,
     };
-    let r = await Api.post(this._urls.urlRefresh(), payload);
-    if (r.status !== 200) {
-      throw new Error(`Failed to obtain an auth token, request was ${this._urls.urlRefresh()} with payload: ${payload} \n 
-      Ensure you have provided a value Auth token via ENV variable "ZEB_API_KEY"`);
+
+    let r = await this._api.post({
+      url: this._urls.urlRefresh(),
+      payload: payload,
+      expectedStatusCode: 200,
+    });
+
+    if (!r) {
+      throw new Error('Failed to obtain refresh token');
     }
 
     this._refreshToken = `Bearer ${r.data.authToken}`;
@@ -41,14 +64,20 @@ export default class ZebAgent {
         Authorization: this._refreshToken,
       },
     };
-    Logger.log(`initialize complete: obtained refreshToken ${this._refreshToken.substring(0, 10)}*****}`);
+    Logger.log(
+      `initialize complete: obtained refreshToken ${this._refreshToken.substring(0, 10)}*****}`
+    );
     Logger.log(`BASE_URL => ${this._reportBaseUrl}`);
     Logger.log(`ACCESS_TOKEN => ${this._accessToken.substring(0, 4)}*****`);
     Logger.log(`PROJECT_KEY => ${this._projectKey}`);
   }
 
   public get concurrency() {
-    return this._concurrentTasks
+    return this._concurrentTasks;
+  }
+
+  public get isEnabled() {
+    return this._enabled;
   }
 
   async startTestRun(payload: {
@@ -60,7 +89,12 @@ export default class ZebAgent {
     config?: any;
     milestone?: any;
   }): Promise<AxiosResponse> {
-    let r = await Api.post(this._urls.urlRegisterRun(), payload, this._header);
+    let r = await this._api.post({
+      url: this._urls.urlRegisterRun(),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 
@@ -76,7 +110,12 @@ export default class ZebAgent {
       labels?: {key: string; value: string}[];
     }
   ): Promise<AxiosResponse> {
-    let r = await Api.post(this._urls.urlStartTest(testRunId), payload, this._header);
+    let r = await this._api.post({
+      url: this._urls.urlStartTest(testRunId),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 
@@ -88,8 +127,13 @@ export default class ZebAgent {
       reason?: string;
       endedAt?: string;
     }
-  ): Promise<AxiosResponse> {
-    let r = await Api.put(this._urls.urlFinishTest(testRunId, testId), payload, this._header);
+  ): Promise<AxiosResponse<any, any> | Error> {
+    let r = await this._api.put({
+      url: this._urls.urlFinishTest(testRunId, testId),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 
@@ -98,8 +142,13 @@ export default class ZebAgent {
     payload: {
       endedAt: string;
     }
-  ): Promise<AxiosResponse> {
-    let r = await Api.put(this._urls.urlFinishRun(testRunId), payload, this._header);
+  ): Promise<AxiosResponse<any, any> | Error> {
+    let r = await this._api.put({
+      url: this._urls.urlFinishRun(testRunId),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 
@@ -111,36 +160,67 @@ export default class ZebAgent {
     if (!imagePath) return;
 
     const file = readFileSync(imagePath);
-    let r = await Api.post(this._urls.urlScreenshots(testRunId, testId), Buffer.from(file), {
-      headers: {
-        Authorization: this._refreshToken,
-        'Content-Type': 'image/png',
+    let r = await this._api.post({
+      url: this._urls.urlScreenshots(testRunId, testId),
+      payload: Buffer.from(file),
+      expectedStatusCode: 201,
+      config: {
+        headers: {
+          Authorization: this._refreshToken,
+          'Content-Type': 'image/png',
+        },
       },
     });
     return r;
   }
 
-  async addTestTags(testRunId: number, testId: number, items: any[]): Promise<AxiosResponse> {
-    if (!items) return;
+  async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse<any, any> | Error> {
+    if (logs.length <= 0) return;
 
-    let payload = {
-      items,
-    };
-    let r = await Api.put(
-      this._urls.urlTestExecutionLabel(testRunId, testId),
-      payload,
-      this._header
-    );
+    let r = await this._api.post({
+      url: this._urls.urlSendLogs(testRunId),
+      payload: logs,
+      expectedStatusCode: 202,
+      config: this._header,
+    });
     return r;
   }
 
-  async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {
+  async addTestTags(
+    testRunId: number,
+    testId: number,
+    items: any[]
+  ): Promise<AxiosResponse<any, any> | Error> {
     if (!items) return;
 
     let payload = {
       items,
     };
-    let r = await Api.put(this._urls.urlTestRunLabel(testRunId), payload, this._header);
+
+    let r = await this._api.put({
+      url: this._urls.urlTestExecutionLabel(testRunId, testId),
+      payload: payload,
+      expectedStatusCode: 204,
+      config: this._header,
+    });
+    return r;
+  }
+
+  async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse<any, any> | Error> {
+    if (!items) return;
+
+    let payload = {
+      items,
+    };
+    let r = await this._api.put(
+      {
+        url: this._urls.urlTestRunLabel(testRunId),
+        payload: payload,
+        expectedStatusCode: 204,
+        config: this._header,
+      },
+      0
+    );
     return r;
   }
 
@@ -165,8 +245,12 @@ export default class ZebAgent {
       },
       testIds: options.testIds,
     };
-
-    let r = await Api.post(this._urls.urlStartSession(options.testRunId), payload, this._header);
+    let r = await this._api.post({
+      url: this._urls.urlStartSession(options.testRunId),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 
@@ -175,13 +259,17 @@ export default class ZebAgent {
     testRunId: number,
     endedAt: string,
     testIds: number[]
-  ): Promise<AxiosResponse> {
+  ): Promise<AxiosResponse<any, any> | Error> {
     let payload = {
       endedAt: endedAt,
       testIds: testIds,
     };
-
-    let r = await Api.put(this._urls.urlFinishSession(testRunId, sessionId), payload, this._header);
+    let r = await this._api.put({
+      url: this._urls.urlFinishSession(testRunId, sessionId),
+      payload: payload,
+      expectedStatusCode: 200,
+      config: this._header,
+    });
     return r;
   }
 }

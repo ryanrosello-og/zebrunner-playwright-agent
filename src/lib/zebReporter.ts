@@ -17,6 +17,12 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async onEnd() {
+    if (!this.zebAgent.isEnabled) {
+      console.log('Zebrunner agent disabled - skipped results upload');
+      return;
+    }
+    await this.zebAgent.initialize();
+
     let resultsParser = new ResultsParser(this.suite);
     await resultsParser.parse();
     let r = await resultsParser.getParsedResults();
@@ -26,17 +32,17 @@ class ZebRunnerReporter implements Reporter {
 
   async postResultsToZebRunner(testResults: testSuite[]) {
     console.time('Duration');
-    await this.zebAgent.initialize();
     let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
     let testRuns = await this.startTestRuns(runStartTime, testResults);
     console.log('testRuns >>', testRuns);
 
-    let testRunTags = await this.addTestRunTags(testRuns);
+    let testRunTags = await this.addTestRunTags(testRuns); // broke - labels does not appear in the UI
     let allTests = testRuns.map((t) => t.tests).flat(1);
 
     let testsExecutions = await this.startTestExecutions(allTests);
     let testTags = await this.addTestTags(testsExecutions.results);
     let screenshots = await this.addScreenshots(testsExecutions.results);
+    await this.sendTestSteps(testsExecutions.results);
     let z = await this.finishTestExecutions(testsExecutions.results);
     await this.sendTestSessions(runStartTime, testsExecutions.results);
     let stopTestRunsResult = await this.stopTestRuns(testRuns, new Date().toISOString());
@@ -114,14 +120,29 @@ class ZebRunnerReporter implements Reporter {
     return {results, errors};
   }
 
+  async sendTestSteps(testResults: testResult[]) {
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+      .for(testResults)
+      .process(async (result: testResult, index, pool) => {
+        const testId = result.testId;
+        let logEntries = result.steps.map((s) => ({
+          testId,
+          ...s,
+        }));
+        await this.zebAgent.addTestLogs(result.testRunId, logEntries);
+      });
+
+    return {results, errors};
+  }
+
   async startTestExecutions(tests) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let testExecResponse = await this.zebAgent.startTestExecution(test.testRunId, {
           name: test.name,
-          className: 'TODO',
-          methodName: 'TODO',
+          className: test.suiteName,
+          methodName: test.name,
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;
