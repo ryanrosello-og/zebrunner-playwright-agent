@@ -51,8 +51,12 @@ The example below will classify the `smoke_tests` as having run in the `dev` env
 
 You can further customize the reporter by overriding these values:
 
-* concurrentTasks - [defaults to 10] - instructs the reporter on how many concurrent requests will be made to Zebrunner in order to speed up the posting of the results
-
+| Config          | Default | Description                                                                                                                                                                                 |   |
+|-----------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
+| enabled         | true    | When this key is set to false, the agent will not post results to Zebrunner.                                                                                                                |   |
+| concurrentTasks | 10      | Instructs the reporter on how many concurrent requests will be made to Zebrunner in order to speed up the posting of the results.  The maximum allowable number of parallel requests is 20. |   |
+| reporterBaseUrl |         | The base url for your Zebrunner instance                                                                                                                                                    |   |
+| projectKey      |         | The Zebrunner project key.  e.g. DEF                                                                                                                                                        |   |
 
 # Contribution
 

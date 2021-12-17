@@ -28,6 +28,8 @@ const config: PlaywrightTestConfig = {
       {
         reporterBaseUrl: 'https://default.zebrunner.com',
         projectKey: 'DEF',
+        enabled: true,
+        concurrentTasks: 19,
       },
     ],
   ],

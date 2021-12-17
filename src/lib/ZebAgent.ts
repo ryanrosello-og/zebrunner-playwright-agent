@@ -14,7 +14,10 @@ export default class ZebAgent {
   private _projectKey: string;
   private _reportBaseUrl: string;
   private _concurrentTasks: number;
+  private _enabled: boolean;
   private _api: Api;
+  private readonly _defaultConcurrentTask = 10;
+  private readonly _maximumConcurrentTask = 20;
 
   constructor(config: {reporter: any[]}) {
     const zebRunnerConf = config.reporter.filter(
@@ -23,7 +26,19 @@ export default class ZebAgent {
     this._accessToken = process.env.ZEB_API_KEY;
     this._projectKey = zebRunnerConf[0][1].projectKey;
     this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
-    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || 10;
+
+    if (zebRunnerConf[0][1].enabled) {
+      this._enabled = true;
+    } else {
+      this._enabled = false;
+    }
+
+    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || this._defaultConcurrentTask;
+
+    if (this._concurrentTasks > this._maximumConcurrentTask) {
+      this._concurrentTasks = this._maximumConcurrentTask;
+    }
+
     this._urls = new Urls(this._projectKey, this._reportBaseUrl);
     this._api = new Api(2, 1000);
   }
@@ -59,6 +74,10 @@ export default class ZebAgent {
 
   public get concurrency() {
     return this._concurrentTasks;
+  }
+
+  public get isEnabled() {
+    return this._enabled;
   }
 
   async startTestRun(payload: {

@@ -17,6 +17,10 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async onEnd() {
+    if (!this.zebAgent.isEnabled) {
+      console.log('Zebrunner agent disabled - skipped results upload');
+      return;
+    }
     await this.zebAgent.initialize();
 
     let resultsParser = new ResultsParser(this.suite);
