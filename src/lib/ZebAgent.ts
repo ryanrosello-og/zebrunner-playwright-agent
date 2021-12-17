@@ -4,6 +4,7 @@ import Api from './Api';
 import Urls from './Urls';
 import {readFileSync} from 'fs';
 import {randomUUID} from 'crypto';
+import {testStep} from './ResultsParser';
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -150,6 +151,18 @@ export default class ZebAgent {
           'Content-Type': 'image/png',
         },
       },
+    });
+    return r;
+  }
+
+  async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse<any, any> | Error> {
+    if (logs.length <= 0) return;
+
+    let r = await this._api.post({
+      url: this._urls.urlSendLogs(testRunId),
+      payload: logs,
+      expectedStatusCode: 202,
+      config: this._header,
     });
     return r;
   }

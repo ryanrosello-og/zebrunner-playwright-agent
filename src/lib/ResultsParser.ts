@@ -14,6 +14,14 @@ export type testResult = {
     key: string;
     value: string;
   }[];
+  steps?: testStep[];
+};
+
+export type testStep = {
+  level: 'INFO' | 'ERROR';
+  timestamp: string;
+  message: string;
+  testId?: number;
 };
 
 export type testSuite = {
@@ -95,6 +103,7 @@ export default class ResultsParser {
           )}`,
           attachment: this.processAttachment(result.attachments),
           browser: browser,
+          steps: this.getTestSteps(result.steps),
         });
       }
     }
@@ -139,5 +148,23 @@ export default class ResultsParser {
     else if (status === 'passed') return 'PASSED';
     else if (status === 'skipped') return 'SKIPPED';
     else return 'ABORTED';
+  }
+
+  getTestSteps(steps): testStep[] {
+    let testSteps = [];
+
+    for (const testStep of steps) {
+      testSteps.push({
+        timestamp: new Date(testStep.startTime).getTime(),
+        message: testStep.error
+          ? `${this.cleanseReason(testStep.error?.message)} \n ${this.cleanseReason(
+              testStep.error?.stack
+            )}`
+          : testStep.title,
+        level: testStep.error ? 'ERROR' : 'INFO',
+      });
+    }
+
+    return testSteps;
   }
 }

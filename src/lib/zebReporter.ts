@@ -38,6 +38,7 @@ class ZebRunnerReporter implements Reporter {
     let testsExecutions = await this.startTestExecutions(allTests);
     let testTags = await this.addTestTags(testsExecutions.results);
     let screenshots = await this.addScreenshots(testsExecutions.results);
+    await this.sendTestSteps(testsExecutions.results);
     let z = await this.finishTestExecutions(testsExecutions.results);
     await this.sendTestSessions(runStartTime, testsExecutions.results);
     let stopTestRunsResult = await this.stopTestRuns(testRuns, new Date().toISOString());
@@ -110,6 +111,21 @@ class ZebRunnerReporter implements Reporter {
       .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.attachScreenshot(test.testRunId, test.testId, test.attachment);
         return {r};
+      });
+
+    return {results, errors};
+  }
+
+  async sendTestSteps(testResults: testResult[]) {
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+      .for(testResults)
+      .process(async (result: testResult, index, pool) => {
+        const testId = result.testId;
+        let logEntries = result.steps.map((s) => ({
+          testId,
+          ...s,
+        }));
+        await this.zebAgent.addTestLogs(result.testRunId, logEntries);
       });
 
     return {results, errors};
