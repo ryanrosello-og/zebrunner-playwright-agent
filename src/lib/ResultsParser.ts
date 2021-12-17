@@ -39,8 +39,10 @@ export default class ResultsParser {
   }
 
   async parse() {
-    for (const testSuite of this._resultsData.suites[0].suites) {
-      await this.parseTestSuite(testSuite);
+    for (const project of this._resultsData.suites) {
+      for (const testSuite of project.suites) {
+        await this.parseTestSuite(testSuite);
+      }
     }
   }
 
