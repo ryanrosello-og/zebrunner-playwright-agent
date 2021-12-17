@@ -10,7 +10,7 @@ Run the following:
 
 Modify your playwright config by enabling the reporter.  You will need to update the `reporterBaseUrl` and `projectKey` keys to match your account.
 
-```json
+```
   reporter: [
     [
       './node_modules/zebrunner-playwright-agent/src/build/src/lib/zebReporter.js',
@@ -30,7 +30,7 @@ Run your tests by providing your Zebrunner API_KEY as an environment variable:
 
 It is highly recommended that you enable the screenshot on failure feature in your `playwright.config.ts` config file:
 
-```json
+```
   use: {
     ...
     screenshot: 'only-on-failure',
