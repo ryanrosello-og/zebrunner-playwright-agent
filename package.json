@@ -17,5 +17,13 @@
   "dependencies": {
     "@supercharge/promise-pool": "^2.0.0",
     "axios": "^0.24.0"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/ryanrosello-og/zebrunner-playwright-agent/issues"
+  },
+  "homepage": "https://github.com/ryanrosello-og/zebrunner-playwright-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanrosello-og/zebrunner-playwright-agent.git"
+  },
 }
