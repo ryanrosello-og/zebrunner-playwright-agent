@@ -25,5 +25,5 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ryanrosello-og/zebrunner-playwright-agent.git"
-  },
+  }
 }
