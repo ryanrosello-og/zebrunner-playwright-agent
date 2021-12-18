@@ -1,8 +1,13 @@
-import {test, expect} from '@playwright/test';
-import ResultsParser from '../src/lib/ResultsParser';
+import {test as base, expect} from '@playwright/test';
+import ResultsParser, {testSuite} from '../src/lib/ResultsParser';
 
-test('parser', async ({page}) => {
-  let testData = {
+type ParserFixture = {
+  testData: any;
+  parsedResults: testSuite[];
+};
+
+const test = base.extend<ParserFixture>({
+  testData: {
     title: '',
     parent: undefined,
     suites: [
@@ -90,13 +95,56 @@ test('parser', async ({page}) => {
       },
     ],
     tests: [],
-  };
+  },
+  parsedResults: async ({testData}, use) => {
+    let resultsParser = new ResultsParser(testData);
+    await resultsParser.parse();
+    let r = await resultsParser.getParsedResults();
+    await use(r);
+  },
+});
 
-  let resultsParser = new ResultsParser(testData);
-  await resultsParser.parse();
-  let r = await resultsParser.getParsedResults();
-  expect(
-    '[{"testSuite":{"title":"nested foo > foo - L2","tests":[{"suiteName":"foo - L2","name":"basic test @broke","tags":[{"key":"tag","value":"broke"}],"status":"FAILED","retry":0,"startedAt":"2021-12-18T09:43:16.000Z","endedAt":"2021-12-18T09:43:23.630Z","reason":"expect(received).toHaveText(expected)\\n\\nExpected string: \\"Playwright_broke\\"\\nReceived string: \\"Playwright\\"\\n\\nCall log:\\n  - waiting for selector \\".navbar__inner .navbar__title\\"\\n  -   selector resolved to <b class=\\"navbar__title\\"…-   unexpected value \\"Playwright\\"\\n  -   selector resolved to <b class=\\"navbar__title\\">Playwright</b>\\n  -   unexpected value \\"Playwright\\"\\n\\n    at /Users/it/repo/pw-zeb/tests/pw_nested_testsuite.spec.ts:24:27\\n    at FixtureRunner.resolveParametersAndRunHookOrTest (/Users/it/repo/pw-zeb/node_modules/@playwright/test/lib/fixtures.js:306:12)\\n    at WorkerRunner._runTestWithBeforeHooks (/Users/it/repo/pw-zeb/node_modules/@playwright/test/lib/workerRunner.js:499:7)","level":"ERROR"}]}]}}]'
-  ).toEqual(JSON.stringify(r));
-  console.log(r);
+test.only('test suite parsed successfully', async ({parsedResults}) => {
+  expect(parsedResults.length).toEqual(1);
+  expect(parsedResults[0].testSuite.title).toEqual('nested foo > foo - L2');
+});
+
+test.only('parses test tags from the results', async ({parsedResults}) => {
+  expect(parsedResults[0].testSuite.tests[0].tags).toEqual([{key: 'tag', value: 'broke'}]);
+});
+
+test.only('parses test steps from the results', async ({parsedResults}) => {
+  expect(parsedResults[0].testSuite.tests[0].steps).toEqual([
+    {timestamp: 1639820596000, message: 'Before Hooks', level: 'INFO'},
+    {
+      timestamp: 1639820598000,
+      message:
+        'expect(received).toHaveText(expected)\n\nExpec…/@playwright/test/lib/workerRunner.js:499:7)',
+      level: 'ERROR',
+    },
+  ]);
+});
+
+test.only('parses test failure details from the results', async ({parsedResults}) => {
+  expect(parsedResults[0].testSuite.tests[0].reason).toEqual(
+    'expect(received).toHaveText(expected)\n\nExpected string: "Playwright_broke"\nReceived string: "Playwright"\n\nCall log:\n  - waiting for selector ".navbar__inner .navbar__title"\n  -   selector resolved to <b class="navbar__title">Playwright</b>\n  -   unexpected value "Playwright"\n  -   selector resolved to <b class="navbar__title">Playwright</b>\n  -   unexpected value "Playwright"\n  -   selector resolved to <b class="navbar__title">Playwright</b>\n  -   unexpected value "Playwright"\n  -   selector re…ss="navbar__title">Playwright</b>\n  -   unexpected value "Playwright"\n  -   selector resolved to <b class="navbar__title">Playwright</b>\n  -   unexpected value "Playwright"\n\n    at /Users/it/repo/pw-zeb/tests/pw_nested_testsuite.spec.ts:24:27\n    at FixtureRunner.resolveParametersAndRunHookOrTest (/Users/it/repo/pw-zeb/node_modules/@playwright/test/lib/fixtures.js:306:12)\n    at WorkerRunner._runTestWithBeforeHooks (/Users/it/repo/pw-zeb/node_modules/@playwright/test/lib/workerRunner.js:499:7)'
+  );
+  expect(parsedResults[0].testSuite.tests[0].status).toEqual('FAILED');
+  expect(parsedResults[0].testSuite.tests[0].retry).toEqual(0);
+});
+
+test.only('parses path to the screenshot from the results', async ({parsedResults}) => {
+  expect(parsedResults[0].testSuite.tests[0].attachment).toEqual(
+    '/Users/it/repo/pw-zeb/test-results/tests-pw_nested_testsuite-nested-foo-foo-l2-basic-test-broke-webkit/test-failed-1.png'
+  );
+});
+
+test.only('parses test details from the results', async ({parsedResults}) => {
+  expect(parsedResults[0].testSuite.tests.length).toEqual(1);
+  expect(parsedResults[0].testSuite.tests[0].startedAt).toEqual('2021-12-18T09:43:16.000Z');
+  expect(parsedResults[0].testSuite.tests[0].endedAt).toEqual('2021-12-18T09:43:23.630Z');
+  expect(parsedResults[0].testSuite.tests[0].name).toEqual('basic test @broke');
+  expect(parsedResults[0].testSuite.tests[0].suiteName).toEqual('foo - L2');
+  expect(parsedResults[0].testSuite.tests[0].name).toEqual('basic test @broke');
+  expect(parsedResults[0].testSuite.tests[0].browser).toBe(undefined);
 });
