@@ -19,7 +19,7 @@ test.describe('nested foo', () => {
       await expect(page).toHaveURL('https://playwright.dev/');
     });
 
-    test('basic test', async ({page}) => {
+    test('basic test @broke', async ({page}) => {
       const title = page.locator('.navbar__inner .navbar__title');
       await expect(title).toHaveText('Playwright_broke');
     });
