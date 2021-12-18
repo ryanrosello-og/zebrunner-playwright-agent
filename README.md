@@ -1,6 +1,6 @@
 # pw-zeb 
 
-Publish Playwright test results directly to Zebrunner after the completion of all test suite execution.
+Publish [Playwright](https://playwright.dev/) test results directly to [Zebrunner](https://zebrunner.com/) after the completion of all test suite execution.
 
 # Setup
 
