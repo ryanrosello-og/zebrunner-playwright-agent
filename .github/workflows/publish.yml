@@ -1,7 +1,12 @@
-name: tests
-on: [push]
+name: Publish package to NPM
+
+on:
+  push:
+    branches:
+    - main # Push events on main branch
+
 jobs:
-  run-tests:
+  publish:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
@@ -15,6 +20,6 @@ jobs:
         uses: icrawl/action-tsc@v1
         with:
           project: ./tsconfig.json
-      - name: run the tests
-        run: npm run test  
-      
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
