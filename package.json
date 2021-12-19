@@ -9,7 +9,7 @@
     "pretest:e2e": "npm run testprep",
     "test:e2e": "playwright test -c ./src/build",
     "pretest": "npm run testprep",
-    "test": "playwright test --grep @unit_test -c ./src/build",
+    "test": "playwright test --config ./playwright_github.config.ts --workers=4 --grep @unit_test -c ./src/build",
     "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
     "debug": "playwright test --config ./playwright.config.ts --workers=1"
   },
