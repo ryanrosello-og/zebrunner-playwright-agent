@@ -35,6 +35,9 @@ class ZebRunnerReporter implements Reporter {
     let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
     let testRuns = await this.startTestRuns(runStartTime, testResults);
     console.log('testRuns >>', testRuns);
+    if(testRuns.length === 0) {
+      return Promise.reject('No successful tests runs found')
+    }
 
     let testRunTags = await this.addTestRunTags(testRuns); // broke - labels does not appear in the UI
     let allTests = testRuns.map((t) => t.tests).flat(1);
@@ -53,6 +56,11 @@ class ZebRunnerReporter implements Reporter {
   async startTestRuns(runStartTime: number, testResults: testSuite[]): Promise<testRun[]> {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(testResults)
+      .handleError(async (error, testResult, pool) => {
+        if (error instanceof Error) {
+          return pool.stop()
+        }
+      })
       .process(async (testResult, index, pool) => {
         let r = await this.zebAgent.startTestRun({
           name: testResult.testSuite.title,
