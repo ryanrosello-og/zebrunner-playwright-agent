@@ -1,0 +1,20 @@
+name: tests
+on: [push]
+jobs:
+  run-tests:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: install node v12
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+      - name: yarn install
+        run: yarn install
+      - name: tsc
+        uses: icrawl/action-tsc@v1
+        with:
+          project: ./tsconfig.json
+      - name: run the tests
+        run: npm run test  
+      

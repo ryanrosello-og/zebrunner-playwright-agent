@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
+    "build": "tsc -p ./tsconfig.json",
     "testprep": "tsc --incremental -p ./tsconfig.json",
     "pretest:e2e": "npm run testprep",
     "test:e2e": "playwright test -c ./src/build",
