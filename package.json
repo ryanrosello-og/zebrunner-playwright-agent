@@ -4,15 +4,20 @@
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
-    "pretest": "tsc --incremental -p ./tsconfig.json",
-    "test": "playwright test -c ./src/build",
+    "build": "tsc -p ./tsconfig.json",
+    "testprep": "tsc --incremental -p ./tsconfig.json",
+    "pretest:e2e": "npm run testprep",
+    "test:e2e": "playwright test -c ./src/build",
+    "pretest": "npm run testprep",
+    "test": "playwright test --workers=4 --grep @unit_test -c ./src/build/playwright_github.config.js",
     "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
     "debug": "playwright test --config ./playwright.config.ts --workers=1"
   },
   "devDependencies": {
     "@playwright/test": "^1.17.1",
     "playwright": "^1.17.1",
-    "prettier": "^2.5.1"
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.4"
   },
   "dependencies": {
     "@supercharge/promise-pool": "^2.0.0",
