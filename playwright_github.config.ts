@@ -14,7 +14,8 @@ const config: PlaywrightTestConfig = {
       use: {...devices['Desktop Safari']},
     },
   ],
-  reporter: [['line'],
+  reporter: [
+    ['line'],
     [
       './src/lib/zebReporter.js',
       {

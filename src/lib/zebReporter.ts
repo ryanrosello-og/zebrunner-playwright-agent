@@ -1,10 +1,9 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
-import ResultsParser, {testResult, testSuite} from './ResultsParser';
+import ResultsParser, {testResult, testRun, testSuite} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 
-type testRun = {title: string; tests: testResult[]; testRunId: number};
 class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
@@ -30,90 +29,100 @@ class ZebRunnerReporter implements Reporter {
     await this.postResultsToZebRunner(r);
   }
 
-  async postResultsToZebRunner(testResults: testSuite[]) {
+  async postResultsToZebRunner(testResults: testRun) {
     console.time('Duration');
-    let runStartTime = new Date(testResults[0].testSuite.tests[0].startedAt).getTime() - 1000;
-    let testRuns = await this.startTestRuns(runStartTime, testResults);
-    console.log('testRuns >>', testRuns);
+    let runStartTime = new Date(testResults.tests[0].startedAt).getTime() - 1000;
+    let testRunName = `${
+      process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()
+    } ${process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'}`;
+    let testRunId = await this.startTestRuns(runStartTime, testRunName);
+    console.log('testRuns >>', testRunId);
 
-    let testRunTags = await this.addTestRunTags(testRuns); // broke - labels does not appear in the UI
-    let allTests = testRuns.map((t) => t.tests).flat(1);
+    let testRunTags = await this.addTestRunTags(testRunId, [
+      {
+        key: 'group',
+        value: 'Regression',
+      },
+    ]); // broke - labels does not appear in the UI
 
-    let testsExecutions = await this.startTestExecutions(allTests);
-    let testTags = await this.addTestTags(testsExecutions.results);
-    let screenshots = await this.addScreenshots(testsExecutions.results);
-    await this.sendTestSteps(testsExecutions.results);
-    let z = await this.finishTestExecutions(testsExecutions.results);
-    await this.sendTestSessions(runStartTime, testsExecutions.results);
-    let stopTestRunsResult = await this.stopTestRuns(testRuns, new Date().toISOString());
+    let testsExecutions = await this.startTestExecutions(testRunId, testResults.tests);
+    let testTags = await this.addTestTags(testRunId, testsExecutions.results);
+    let screenshots = await this.addScreenshots(testRunId, testsExecutions.results);
+
+    // await this.sendTestSteps(testsExecutions.results); // FIXME: one call
+
+    let z = await this.finishTestExecutions(testRunId, testsExecutions.results);
+    // await this.sendTestSessions(runStartTime, testsExecutions.results); // FIXME: one call
+
+    let stopTestRunsResult = await this.stopTestRuns(testRunId, new Date().toISOString());
 
     console.timeEnd('Duration');
   }
 
-  async startTestRuns(runStartTime: number, testResults: testSuite[]): Promise<testRun[]> {
-    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
-      .for(testResults)
-      .process(async (testResult, index, pool) => {
-        let r = await this.zebAgent.startTestRun({
-          name: testResult.testSuite.title,
-          startedAt: new Date(runStartTime).toISOString(),
-          framework: 'Playwright',
-          config: {
-            environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
-            build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
-          },
-        });
-        let testRunId = r.data.id;
-        testResult.testSuite.tests.forEach((t) => (t['testRunId'] = testRunId));
-        return {testRunId, ...testResult.testSuite};
-      });
+  async startTestRuns(runStartTime: number, testRunName: string): Promise<number> {
+    let r = await this.zebAgent.startTestRun({
+      name: testRunName,
+      startedAt: new Date(runStartTime).toISOString(),
+      framework: 'Playwright',
+      config: {
+        environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
+        build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
+      },
+    });
 
-    return results;
+    if (isNaN(r.data.id)) {
+      return Promise.reject('Failed to initiate test run');
+    } else {
+      return Number(r.data.id);
+    }
+    // const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+    //   .for(testResults)
+    //   .process(async (testResult, index, pool) => {
+    //     let r = await this.zebAgent.startTestRun({
+    //       name: testResult.testSuite.title,
+    //       startedAt: new Date(runStartTime).toISOString(),
+    //       framework: 'Playwright',
+    //       config: {
+    //         environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
+    //         build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
+    //       },
+    //     });
+    //     let testRunId = r.data.id;
+    //     testResult.testSuite.tests.forEach((t) => (t['testRunId'] = testRunId));
+    //     return {testRunId, ...testResult.testSuite};
+    //   });
+
+    // return results;
   }
 
-  async stopTestRuns(testRuns: testRun[], runEndTime: string) {
-    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
-      .for(testRuns)
-      .process(async (testRun: testRun, index, pool) => {
-        await this.zebAgent.finishTestRun(testRun.testRunId, {
-          endedAt: runEndTime,
-        });
-      });
-
-    return {results, errors};
+  async stopTestRuns(testRunId: number, runEndTime: string) {
+    let r = await this.zebAgent.finishTestRun(testRunId, {
+      endedAt: runEndTime,
+    });
+    return r;
   }
 
-  async addTestRunTags(testRuns: testRun[]) {
-    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
-      .for(testRuns)
-      .process(async (testRun: testRun, index, pool) => {
-        await this.zebAgent.addTestRunTags(testRun.testRunId, [
-          {
-            key: 'group',
-            value: 'Regression',
-          },
-        ]);
-      });
-
-    return {results, errors};
+  async addTestRunTags(testRunId: number, tags: any[]) {
+    let r = await this.zebAgent.addTestRunTags(testRunId, tags);
+    return r;
   }
 
-  async addTestTags(tests) {
+  async addTestTags(testRunId: number, tests) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
-        let r = await this.zebAgent.addTestTags(test.testRunId, test.testId, test.tags);
+        let r = await this.zebAgent.addTestTags(testRunId, test.testId, test.tags);
         return {r};
       });
 
     return {results, errors};
   }
 
-  async addScreenshots(tests) {
+  async addScreenshots(testRunId: number, tests) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
-        let r = await this.zebAgent.attachScreenshot(test.testRunId, test.testId, test.attachment);
+        let r = await this.zebAgent.attachScreenshot(testRunId, test.testId, test.attachment);
         return {r};
       });
 
@@ -135,11 +144,11 @@ class ZebRunnerReporter implements Reporter {
     return {results, errors};
   }
 
-  async startTestExecutions(tests) {
+  async startTestExecutions(testRunId: number, tests) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
-        let testExecResponse = await this.zebAgent.startTestExecution(test.testRunId, {
+        let testExecResponse = await this.zebAgent.startTestExecution(testRunId, {
           name: test.name,
           className: test.suiteName,
           methodName: test.name,
@@ -151,11 +160,11 @@ class ZebRunnerReporter implements Reporter {
     return {results, errors};
   }
 
-  async finishTestExecutions(tests: testResult[]) {
+  async finishTestExecutions(testRunId: number, tests: testResult[]) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
-        let r = await this.zebAgent.finishTestExecution(test.testRunId, test.testId, {
+        let r = await this.zebAgent.finishTestExecution(testRunId, test.testId, {
           result: test.status,
           reason: test.reason,
           endedAt: test.endedAt,

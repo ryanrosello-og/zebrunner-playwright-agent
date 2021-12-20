@@ -32,17 +32,27 @@ export type testSuite = {
   };
 };
 
+export type testRun = {
+  tests: testResult[];
+  testRunId?: number;
+  title: string;
+};
+
 export default class ResultsParser {
   private _resultsData: any;
-  private _result: testSuite[];
+  private _result: testRun;
 
   constructor(results) {
-    this._result = [];
+    this._result = {
+      tests: [],
+      testRunId: 0,
+      title: '',
+    };
     this._resultsData = results;
     console.log(this._resultsData);
   }
 
-  async getParsedResults(): Promise<testSuite[]> {
+  async getParsedResults(): Promise<testRun> {
     return this._result;
   }
 
@@ -57,6 +67,37 @@ export default class ResultsParser {
   async parseTestSuite(suite, suiteIndex = 0) {
     let testResults = [];
     if (suite.suites?.length > 0) {
+      testResults = await this.parseTests(
+        suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
+        suite.tests
+      );
+      this.updateResults({
+        tests: testResults,
+      });
+      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++);
+    } else {
+      testResults = await this.parseTests(
+        suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
+        suite.tests
+      );
+      this.updateResults({
+        tests: testResults,
+      });
+      return;
+    }
+  }
+
+  async parseGroupedByTestSuite() {
+    for (const project of this._resultsData.suites) {
+      for (const testSuite of project.suites) {
+        await this.parseByTestSuite(testSuite);
+      }
+    }
+  }
+
+  async parseByTestSuite(suite, suiteIndex = 0) {
+    let testResults = [];
+    if (suite.suites?.length > 0) {
       testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
         testSuite: {
@@ -64,7 +105,7 @@ export default class ResultsParser {
           tests: testResults,
         },
       });
-      await this.parseTestSuite(suite.suites[suiteIndex], suiteIndex++);
+      await this.parseByTestSuite(suite.suites[suiteIndex], suiteIndex++);
     } else {
       testResults = await this.parseTests(suite.title, suite.tests);
       this.updateResults({
@@ -78,8 +119,8 @@ export default class ResultsParser {
   }
 
   updateResults(data) {
-    if (data.testSuite.tests.length > 0) {
-      this._result.push(data);
+    if (data.tests.length > 0) {
+      this._result.tests = this._result.tests.concat(data.tests);
     }
   }
 
@@ -91,7 +132,7 @@ export default class ResultsParser {
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
-          name: test.title,
+          name: `${suiteName} > ${test.title}`,
           tags: this.getTestTags(test.title),
           status: this.determineStatus(result.status),
           retry: result.retry,
