@@ -16,10 +16,8 @@ jobs:
           node-version: 16.13.1
       - name: yarn install
         run: yarn install
-      - name: tsc
-        uses: icrawl/action-tsc@v1
-        with:
-          project: ./tsconfig.json
+      - name: build
+        run: npm run build
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
