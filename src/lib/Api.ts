@@ -69,7 +69,7 @@ export default class Api {
       config?: any;
     },
     attempt?: number
-  ): Promise<AxiosResponse<any, any> | Error> {
+  ): Promise<AxiosResponse> {
     Logger.log(
       attempt
         ? `PUT *attempt[${attempt}] ${this.shortenUrl(options.url)}`
