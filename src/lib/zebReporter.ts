@@ -24,13 +24,15 @@ class ZebRunnerReporter implements Reporter {
 
     let resultsParser = new ResultsParser(this.suite);
     await resultsParser.parse();
-    let r = await resultsParser.getParsedResults();
-    console.log(r);
-    await this.postResultsToZebRunner(r);
+    let parsedResults = await resultsParser.getParsedResults();
+    console.log(parsedResults);
+    console.time('Duration');
+    let zebrunnerResults = await this.postResultsToZebRunner(parsedResults);
+    console.timeEnd('Duration');
+    console.log(zebrunnerResults);
   }
 
   async postResultsToZebRunner(testResults: testRun) {
-    console.time('Duration');
     let runStartTime = new Date(testResults.tests[0].startedAt).getTime() - 1000;
     let testRunName = `${
       process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()
@@ -48,21 +50,50 @@ class ZebRunnerReporter implements Reporter {
     let testsExecutions = await this.startTestExecutions(testRunId, testResults.tests);
     let testTags = await this.addTestTags(testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(testRunId, testsExecutions.results);
-    await this.sendTestSteps(testRunId, testsExecutions.results);
-
-    let z = await this.finishTestExecutions(testRunId, testsExecutions.results);
-    await this.sendTestSessions(testRunId, runStartTime, testsExecutions.results);
-
+    let testSteps = await this.sendTestSteps(testRunId, testsExecutions.results);
+    let endTestExecutions = await this.finishTestExecutions(testRunId, testsExecutions.results);
+    let testSessions = await this.sendTestSessions(
+      testRunId,
+      runStartTime,
+      testsExecutions.results
+    );
     let stopTestRunsResult = await this.stopTestRuns(testRunId, new Date().toISOString());
 
-    console.timeEnd('Duration');
-    let summary = [
-      //['Tests uploaded', z.results.map(t => t.status).length],
-      //['Screenshots uploaded', screenshots.results.filter((t) => t.status === 201).length],
-      ['Tests uploaded', 'TODO'],
-      ['Screenshots uploaded', 'TODO'],
-    ];
-    console.table(summary);
+    let summary = {
+      testsExecutions: {
+        success: testsExecutions.results.length,
+        errors: testsExecutions.errors.length,
+      },
+      testRunTags: {
+        success: testRunTags.status === 204 ? 1 : 0,
+        errors: testRunTags.status !== 204 ? 1 : 0,
+      },
+      testTags: {
+        success: testTags.results.filter((f) => f && f.status === 204).length,
+        errors: testTags.errors.length,
+      },
+      screenshots: {
+        success: screenshots.results.filter((f) => f && f.status === 201).length,
+        errors: screenshots.errors.length,
+      },
+      testStepsRequests: {
+        success: testSteps.status === 202 ? 1 : 0,
+        errors: testSteps.status !== 202 ? 1 : 0,
+      },
+      endTestExecutions: {
+        success: endTestExecutions.results.filter((f) => f && f.status === 200).length,
+        errors: endTestExecutions.errors.length,
+      },
+      testSessions: {
+        success: testSessions.results.filter((f) => f && f.status === 200).length,
+        errors: testSessions.errors.length,
+      },
+      stopTestRunsResult: {
+        success: stopTestRunsResult.status === 200 ? 1 : 0,
+        errors: stopTestRunsResult.status !== 200 ? 1 : 0,
+      },
+    };
+    return summary;
   }
 
   async startTestRuns(runStartTime: number, testRunName: string): Promise<number> {
@@ -100,7 +131,7 @@ class ZebRunnerReporter implements Reporter {
       .for(tests)
       .process(async (test: testResult, index, pool) => {
         let r = await this.zebAgent.addTestTags(testRunId, test.testId, test.tags);
-        return {r};
+        return r;
       });
 
     return {results, errors};
@@ -188,7 +219,7 @@ class ZebRunnerReporter implements Reporter {
           suite[1].map((t) => t.testId)
         );
 
-        return {r};
+        return r;
       });
 
     return {results, errors};

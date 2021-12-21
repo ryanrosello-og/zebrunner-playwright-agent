@@ -127,7 +127,7 @@ export default class ZebAgent {
       reason?: string;
       endedAt?: string;
     }
-  ): Promise<AxiosResponse<any, any> | Error> {
+  ): Promise<AxiosResponse> {
     let r = await this._api.put({
       url: this._urls.urlFinishTest(testRunId, testId),
       payload: payload,
@@ -142,7 +142,7 @@ export default class ZebAgent {
     payload: {
       endedAt: string;
     }
-  ): Promise<AxiosResponse<any, any> | Error> {
+  ): Promise<AxiosResponse> {
     let r = await this._api.put({
       url: this._urls.urlFinishRun(testRunId),
       payload: payload,
@@ -174,7 +174,7 @@ export default class ZebAgent {
     return r;
   }
 
-  async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse<any, any> | Error> {
+  async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse> {
     if (logs.length <= 0) return;
 
     let r = await this._api.post({
@@ -186,11 +186,7 @@ export default class ZebAgent {
     return r;
   }
 
-  async addTestTags(
-    testRunId: number,
-    testId: number,
-    items: any[]
-  ): Promise<AxiosResponse<any, any> | Error> {
+  async addTestTags(testRunId: number, testId: number, items: any[]): Promise<AxiosResponse> {
     if (!items) return;
 
     let payload = {
@@ -206,7 +202,7 @@ export default class ZebAgent {
     return r;
   }
 
-  async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse<any, any> | Error> {
+  async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {
     if (!items) return;
 
     let payload = {
@@ -259,7 +255,7 @@ export default class ZebAgent {
     testRunId: number,
     endedAt: string,
     testIds: number[]
-  ): Promise<AxiosResponse<any, any> | Error> {
+  ): Promise<AxiosResponse> {
     let payload = {
       endedAt: endedAt,
       testIds: testIds,
