@@ -163,22 +163,35 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async sendTestSessions(testRunId: number, runStartTime: number, tests: testResult[]) {
-    const testIds = tests.map((t) => t.testId);
-    let sess = await this.zebAgent.startTestSession({
-      browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
-      startedAt: new Date(runStartTime).toISOString(),
-      testRunId: testRunId,
-      testIds: testIds,
-    });
+    const groupBy = (array, key) => {
+      return array.reduce((result, currentValue) => {
+        (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+        return result;
+      }, {});
+    };
 
-    let r = await this.zebAgent.finishTestSession(
-      sess.data.id,
-      testRunId,
-      new Date(runStartTime + 1).toISOString(),
-      testIds
-    );
+    const testSuitesGrouped = groupBy(tests, 'suiteName');
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+      .for(Object.entries(testSuitesGrouped))
+      .process(async (suite: [string, testResult[]], index, pool) => {
+        let sess = await this.zebAgent.startTestSession({
+          browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
+          startedAt: new Date(runStartTime).toISOString(),
+          testRunId: testRunId,
+          testIds: suite[1].map((t) => t.testId),
+        });
 
-    return r;
+        let r = await this.zebAgent.finishTestSession(
+          sess.data.id,
+          testRunId,
+          new Date(runStartTime + 1).toISOString(),
+          suite[1].map((t) => t.testId)
+        );
+
+        return {r};
+      });
+
+    return {results, errors};
   }
 }
 export default ZebRunnerReporter;
