@@ -80,6 +80,14 @@ export default class ZebAgent {
     return this._enabled;
   }
 
+  public get projectKey() {
+    return this._projectKey;
+  }
+
+  public get baseUrl() {
+    return this._reportBaseUrl;
+  }
+
   async startTestRun(payload: {
     uuid?: string;
     name: string;
