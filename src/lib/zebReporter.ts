@@ -30,7 +30,11 @@ class ZebRunnerReporter implements Reporter {
     console.time('Duration');
     let zebrunnerResults = await this.postResultsToZebRunner(parsedResults);
     console.log(zebrunnerResults);
-    console.log(zebrunnerResults.resultsLink);
+    console.log(
+      zebrunnerResults.resultsLink !== ''
+        ? `View in Zebrunner => ${zebrunnerResults.resultsLink}`
+        : ''
+    );
     console.timeEnd('Duration');
   }
 
@@ -95,7 +99,7 @@ class ZebRunnerReporter implements Reporter {
         errors: stopTestRunsResult.status !== 200 ? 1 : 0,
       },
       resultsLink: testRunId
-        ? `View results by clicking this link > ${this.zebAgent.baseUrl}/projects/${this.zebAgent.projectKey}/test-runs/${this.testRunId}`
+        ? `${this.zebAgent.baseUrl}/projects/${this.zebAgent.projectKey}/test-runs/${this.testRunId}`
         : '',
     };
     return summary;
