@@ -11,7 +11,8 @@
     "pretest": "npm run testprep",
     "test": "playwright test --workers=4 --grep @unit_test -c ./src/build/playwright_github.config.js",
     "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
-    "debug": "playwright test --config ./playwright.config.ts --workers=1"
+    "debug": "playwright test --config ./playwright.config.ts --workers=1",
+    "start":"node ./woka.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.17.1",
