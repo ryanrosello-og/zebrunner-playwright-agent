@@ -8,6 +8,7 @@ class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
   private zebAgent: ZebAgent;
+  private testRunId: number;
 
   onBegin(config: FullConfig, suite: Suite) {
     this.config = config;
@@ -28,8 +29,13 @@ class ZebRunnerReporter implements Reporter {
     console.log(parsedResults);
     console.time('Duration');
     let zebrunnerResults = await this.postResultsToZebRunner(parsedResults);
-    console.timeEnd('Duration');
     console.log(zebrunnerResults);
+    console.log(
+      zebrunnerResults.resultsLink !== ''
+        ? `View in Zebrunner => ${zebrunnerResults.resultsLink}`
+        : ''
+    );
+    console.timeEnd('Duration');
   }
 
   async postResultsToZebRunner(testResults: testRun) {
@@ -92,6 +98,9 @@ class ZebRunnerReporter implements Reporter {
         success: stopTestRunsResult.status === 200 ? 1 : 0,
         errors: stopTestRunsResult.status !== 200 ? 1 : 0,
       },
+      resultsLink: testRunId
+        ? `${this.zebAgent.baseUrl}/projects/${this.zebAgent.projectKey}/test-runs/${this.testRunId}`
+        : '',
     };
     return summary;
   }
@@ -110,7 +119,8 @@ class ZebRunnerReporter implements Reporter {
     if (isNaN(r.data.id)) {
       return Promise.reject('Failed to initiate test run');
     } else {
-      return Number(r.data.id);
+      this.testRunId = Number(r.data.id);
+      return this.testRunId;
     }
   }
 

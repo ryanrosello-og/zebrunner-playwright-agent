@@ -16,5 +16,7 @@ jobs:
         with:
           project: ./tsconfig.json
       - name: run the tests
-        run: npm run test  
-      
+        run: |
+          npm run start &
+          sleep 10
+          npm run test 

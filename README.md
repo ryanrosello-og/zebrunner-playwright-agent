@@ -1,10 +1,6 @@
-# pw-zeb 
+# pw-zeb ![Biulds](https://github.com/ryanrosello-og/zebrunner-playwright-agent/actions/workflows/main.yml/badge.svg) [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ryanrosello-og/zebrunner-playwright-agent/blob/master/LICENSE)
 
-![Biulds](https://github.com/ryanrosello-og/zebrunner-playwright-agent/actions/workflows/main.yml/badge.svg)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ryanrosello-og/zebrunner-playwright-agent/blob/master/LICENSE)
-
-
-Publish [Playwright](https://playwright.dev/) test results directly to [Zebrunner](https://zebrunner.com/) after the completion of all test suite execution.
+> Publish [Playwright](https://playwright.dev/) test results directly to [Zebrunner](https://zebrunner.com/) after the completion of all test suite execution.
 
 # Setup
 
@@ -21,6 +17,8 @@ Modify your playwright config by enabling the reporter.  You will need to update
       {
         reporterBaseUrl: 'https://default.zebrunner.com',
         projectKey: 'DEF',
+        enabled: true,
+        concurrentTasks: 10,
       },
     ],
   ],
