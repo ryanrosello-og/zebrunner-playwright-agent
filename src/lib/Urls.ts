@@ -8,54 +8,64 @@ export default class Urls {
   }
 
   urlRefresh() {
-    return `${this._baseUrl}/api/iam/v1/auth/refresh`;
+    return {url: `${this._baseUrl}/api/iam/v1/auth/refresh`, status: 200};
   }
 
   urlRegisterRun() {
-    return `${this._baseUrl}/api/reporting/v1/test-runs?projectKey=${this._projectKey}`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs?projectKey=${this._projectKey}`,
+      status: 200,
+    };
   }
 
   urlFinishRun(testRunId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}`;
+    return {url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}`, status: 200};
   }
 
   urlStartTest(testRunId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests`;
+    return {url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests`, status: 200};
   }
 
   urlFinishTest(testRunId: number, testId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}`,
+      status: 200,
+    };
   }
 
   urlStartSession(testRunId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions`,
+      status: 200,
+    };
   }
 
   urlTestRunLabel(testRunId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/labels`;
+    return {url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/labels`, status: 204};
   }
 
   urlFinishSession(testRunId: number, sessionId: string) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions/${sessionId}`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/test-sessions/${sessionId}`,
+      status: 200,
+    };
   }
 
   urlScreenshots(testRunId: number, testId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`,
+      status: 201,
+    };
   }
 
   urlTestExecutionLabel(testRunId: number, testId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/labels`;
-  }
-
-  urlTestExecutionArtifact(testRunId: number, testId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/artifact-references`;
+    return {
+      url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/labels`,
+      status: 204,
+    };
   }
 
   urlSendLogs(testRunId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/logs`;
-  }
-
-  urlSendScreenShot(testRunId: number, testId: number) {
-    return `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`;
+    return {url: `${this._baseUrl}/api/reporting/v1/test-runs/${testRunId}/logs`, status: 202};
   }
 }
