@@ -2,7 +2,7 @@ import {test, expect} from '@playwright/test';
 import {WebClient, LogLevel} from '@slack/web-api';
 
 test.only('slocak @unit_test', async () => {
-  const client = new WebClient('xoxb-2879490533459-2881755772372-Mxjt5LzAf1lXWq8lZf9XnKcW', {
+  const client = new WebClient('xoxb-nope', {
     logLevel: LogLevel.DEBUG,
   });
 
