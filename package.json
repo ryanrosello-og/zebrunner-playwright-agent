@@ -12,10 +12,11 @@
     "test": "playwright test --workers=4 --grep @unit_test -c ./src/build/playwright_github.config.js",
     "prettier": "prettier --write --loglevel warn \"**/**/*.ts\"",
     "debug": "playwright test --config ./playwright.config.ts --workers=1",
-    "start":"node ./woka.js"
+    "start": "node ./woka.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.17.1",
+    "@slack/web-api": "^6.5.1",
     "playwright": "^1.17.1",
     "prettier": "^2.5.1",
     "typescript": "^4.5.4"
