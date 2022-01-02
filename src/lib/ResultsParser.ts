@@ -36,6 +36,9 @@ export type testRun = {
   tests: testResult[];
   testRunId?: number;
   title: string;
+  testRunName: string;
+  build: string;
+  environment: string;
 };
 
 export default class ResultsParser {
@@ -47,6 +50,11 @@ export default class ResultsParser {
       tests: [],
       testRunId: 0,
       title: '',
+      testRunName: `${process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()} ${
+        process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'
+      }`,
+      build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
+      environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
     };
     this._resultsData = results;
     console.log(this._resultsData);
@@ -54,6 +62,41 @@ export default class ResultsParser {
 
   async getParsedResults(): Promise<testRun> {
     return this._result;
+  }
+
+  getRunStartTime(): number {
+    return new Date(this._result.tests[0].startedAt).getTime() - 1000;
+  }
+
+  getTotalRunDuration(): number {
+    const earliestExecTime = Math.min(
+      ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
+    );
+    const latestExecTime = Math.min(
+      ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
+    );
+    return Math.ceil((latestExecTime - earliestExecTime) / 1000);
+  }
+
+  async getSummaryResults() {
+    return {
+      build: this._result.build,
+      environment: this._result.environment,
+      passed: this._result.tests.filter((t) => t.status === 'PASSED').length,
+      failed: this._result.tests.filter((t) => t.status === 'FAILED').length,
+      skipped: this._result.tests.filter((t) => t.status === 'SKIPPED').length,
+      aborted: this._result.tests.filter((t) => t.status === 'ABORTED').length,
+      duration: this.getTotalRunDuration(),
+      failures: this._result.tests
+        .filter((t) => t.status === 'FAILED')
+        .map((failures) => ({
+          test: failures.name,
+          message:
+            failures.reason.length > 100
+              ? failures.reason.substring(0, 100) + ' ...'
+              : failures.reason,
+        })),
+    };
   }
 
   async parse() {

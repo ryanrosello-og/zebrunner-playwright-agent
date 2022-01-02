@@ -155,7 +155,7 @@ test.describe('zebrunner upload', async () => {
     let resultsParser = new ResultsParser(testData);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
-    let result = await zeb.postResultsToZebRunner(parsedResults);
+    let result = await zeb.postResultsToZebRunner(1000, parsedResults);
     expect(result).toEqual({
       testsExecutions: {
         success: 1,

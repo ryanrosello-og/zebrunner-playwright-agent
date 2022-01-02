@@ -30,6 +30,8 @@ const config: PlaywrightTestConfig = {
         projectKey: 'DEF',
         enabled: true,
         concurrentTasks: 19,
+        postToSlack: true,
+        slackReportingChannels: 'zeb,general',
       },
     ],
   ],

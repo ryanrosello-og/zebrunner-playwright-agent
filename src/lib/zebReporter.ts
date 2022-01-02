@@ -3,11 +3,13 @@ import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun, testSuite} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
+import SlackReporter from './SlackReporter';
 
 class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
   private zebAgent: ZebAgent;
+  private slackReporter: SlackReporter;
   private testRunId: number;
 
   onBegin(config: FullConfig, suite: Suite) {
@@ -28,7 +30,10 @@ class ZebRunnerReporter implements Reporter {
     let parsedResults = await resultsParser.getParsedResults();
     console.log(parsedResults);
     console.time('Duration');
-    let zebrunnerResults = await this.postResultsToZebRunner(parsedResults);
+    let zebrunnerResults = await this.postResultsToZebRunner(
+      resultsParser.getRunStartTime(),
+      parsedResults
+    );
     console.log(zebrunnerResults);
     console.log(
       zebrunnerResults.resultsLink !== ''
@@ -36,13 +41,19 @@ class ZebRunnerReporter implements Reporter {
         : ''
     );
     console.timeEnd('Duration');
+
+    // post to Slack (if enabled)
+    this.slackReporter = new SlackReporter(this.config);
+    if (this.slackReporter.isEnabled) {
+      this.slackReporter.sendMessage(
+        resultsParser.getSummaryResults(),
+        zebrunnerResults.resultsLink
+      );
+    }
   }
 
-  async postResultsToZebRunner(testResults: testRun) {
-    let runStartTime = new Date(testResults.tests[0].startedAt).getTime() - 1000;
-    let testRunName = `${
-      process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()
-    } ${process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'}`;
+  async postResultsToZebRunner(runStartTime: number, testResults: testRun) {
+    let testRunName = testResults.testRunName;
     let testRunId = await this.startTestRuns(runStartTime, testRunName);
     console.log('testRuns >>', testRunId);
 
