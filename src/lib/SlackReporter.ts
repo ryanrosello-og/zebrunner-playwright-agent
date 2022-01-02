@@ -10,7 +10,7 @@ export default class SlackReporter {
   private _config: zebrunnerConfig;
 
   constructor(config: zebrunnerConfig) {
-    this._enabled = config.postToSlack;
+    this._enabled = config.slackEnabled;
     this._config = config;
     if (!this._enabled) {
       console.log('Slack reporter disabled - skipped posting results to Slack');
@@ -21,7 +21,7 @@ export default class SlackReporter {
       throw new Error('environment variable: SLACK_BOT_USER_OAUTH_TOKEN  was not supplied');
     }
 
-    if (config.notifyOnlyOnFailures) {
+    if (config.slackReportOnlyOnFailures) {
       this._notifyOnlyOnFailures = true;
     }
 
@@ -44,8 +44,7 @@ export default class SlackReporter {
     build: string,
     environment: string
   ): Promise<testSummary> {
-    const maximumCharLength = 270;
-    const maximumNumberFailures = 2;
+    const maximumCharLength = this._config.slackStacktraceLength;
     return {
       build,
       environment,
@@ -56,15 +55,15 @@ export default class SlackReporter {
       duration: this.getTotalRunDuration(results),
       failures: results
         .filter((t) => t.status === 'FAILED')
-        .slice(0, maximumNumberFailures)
+        .slice(0, this._config.slackDisplayNumberOfFailures)
         .map((failures) => ({
           zebResult: `${this._config.reporterBaseUrl}/projects/${this._config.projectKey}/test-runs/${testRunId}/tests/${failures.testId}`,
           test: failures.name,
           message:
             failures.reason.length > maximumCharLength
-              ? failures.reason.substring(0, maximumCharLength).replace(/(\r\n|\n|\r)/gm, '') +
+              ? failures.reason.substring(0, maximumCharLength).replace(/(\r\n|\n|\r)/gm, ' ') +
                 ' ...'
-              : failures.reason.replace(/(\r\n|\n|\r)/gm, ''),
+              : failures.reason.replace(/(\r\n|\n|\r)/gm, ' '),
         })),
     };
   }

@@ -1,7 +1,7 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
-import ResultsParser, {testResult, testRun, testSuite} from './ResultsParser';
+import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
 
@@ -10,9 +10,11 @@ export type zebrunnerConfig = {
   reporterBaseUrl: string;
   enabled: boolean;
   concurrentTasks: number;
-  postToSlack: boolean;
-  notifyOnlyOnFailures: boolean;
+  slackEnabled: boolean;
+  slackReportOnlyOnFailures: boolean;
+  slackDisplayNumberOfFailures: number;
   slackReportingChannels: string;
+  slackStacktraceLength: number;
 };
 
 class ZebRunnerReporter implements Reporter {
@@ -30,9 +32,11 @@ class ZebRunnerReporter implements Reporter {
       reporterBaseUrl: configKeys[0][1].reporterBaseUrl,
       enabled: configKeys[0][1].enabled,
       concurrentTasks: configKeys[0][1].concurrentTasks,
-      postToSlack: configKeys[0][1].postToSlack,
-      notifyOnlyOnFailures: configKeys[0][1].notifyOnlyOnFailures,
+      slackEnabled: configKeys[0][1].slackEnabled,
+      slackReportOnlyOnFailures: configKeys[0][1].slackReportOnlyOnFailures,
+      slackDisplayNumberOfFailures: configKeys[0][1].slackDisplayNumberOfFailures,
       slackReportingChannels: configKeys[0][1].slackReportingChannels,
+      slackStacktraceLength: configKeys[0][1].slackStacktraceLength,
     };
     this.config = config;
     this.suite = suite;
