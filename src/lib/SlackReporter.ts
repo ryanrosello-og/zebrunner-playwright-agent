@@ -1,5 +1,5 @@
 import {WebClient, LogLevel} from '@slack/web-api';
-import {testSummary} from './ResultsParser';
+import {testResult, testSummary} from './ResultsParser';
 import {zebrunnerConfig} from './zebReporter';
 
 export default class SlackReporter {
@@ -7,9 +7,11 @@ export default class SlackReporter {
   private _channelIds: string[];
   private _enabled: boolean;
   private _notifyOnlyOnFailures: boolean = false;
+  private _config: zebrunnerConfig;
 
   constructor(config: zebrunnerConfig) {
     this._enabled = config.postToSlack;
+    this._config = config;
     if (!this._enabled) {
       console.log('Slack reporter disabled - skipped posting results to Slack');
       return;
@@ -34,6 +36,43 @@ export default class SlackReporter {
     this._slackClient = new WebClient(process.env.SLACK_BOT_USER_OAUTH_TOKEN, {
       logLevel: LogLevel.DEBUG,
     });
+  }
+
+  async getSummaryResults(
+    testRunId: number,
+    results: testResult[],
+    build: string,
+    environment: string
+  ): Promise<testSummary> {
+    const maximumCharLength = 270;
+    const maximumNumberFailures = 2;
+    return {
+      build,
+      environment,
+      passed: results.filter((t) => t.status === 'PASSED').length,
+      failed: results.filter((t) => t.status === 'FAILED').length,
+      skipped: results.filter((t) => t.status === 'SKIPPED').length,
+      aborted: results.filter((t) => t.status === 'ABORTED').length,
+      duration: this.getTotalRunDuration(results),
+      failures: results
+        .filter((t) => t.status === 'FAILED')
+        .slice(0, maximumNumberFailures)
+        .map((failures) => ({
+          zebResult: `${this._config.reporterBaseUrl}/projects/${this._config.projectKey}/test-runs/${testRunId}/tests/${failures.testId}`,
+          test: failures.name,
+          message:
+            failures.reason.length > maximumCharLength
+              ? failures.reason.substring(0, maximumCharLength).replace(/(\r\n|\n|\r)/gm, '') +
+                ' ...'
+              : failures.reason.replace(/(\r\n|\n|\r)/gm, ''),
+        })),
+    };
+  }
+
+  getTotalRunDuration(results: testResult[]): number {
+    const earliestExecTime = Math.min(...results.map((t) => new Date(t.startedAt).getTime()));
+    const latestExecTime = Math.max(...results.map((t) => new Date(t.startedAt).getTime()));
+    return Math.ceil((latestExecTime - earliestExecTime) / 1000);
   }
 
   async sendMessage(summaryResults: testSummary, zeburunnerRunLink: string) {

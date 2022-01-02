@@ -55,6 +55,9 @@ class ZebRunnerReporter implements Reporter {
       resultsParser.getRunStartTime(),
       parsedResults
     );
+
+    const slackResults = zebrunnerResults.testsExecutions.results;
+    delete zebrunnerResults.testsExecutions.results; // omit results from printing
     console.log(zebrunnerResults);
     console.log(
       zebrunnerResults.resultsLink !== ''
@@ -66,39 +69,48 @@ class ZebRunnerReporter implements Reporter {
     // post to Slack (if enabled)
     this.slackReporter = new SlackReporter(this.zebConfig);
     if (this.slackReporter.isEnabled) {
-      let testSummary = await resultsParser.getSummaryResults();
+      let testSummary = await this.slackReporter.getSummaryResults(
+        this.testRunId,
+        slackResults,
+        resultsParser.build,
+        resultsParser.environment
+      );
       await this.slackReporter.sendMessage(testSummary, zebrunnerResults.resultsLink);
     }
   }
 
   async postResultsToZebRunner(runStartTime: number, testResults: testRun) {
     let testRunName = testResults.testRunName;
-    let testRunId = await this.startTestRuns(runStartTime, testRunName);
-    console.log('testRuns >>', testRunId);
+    await this.startTestRuns(runStartTime, testRunName);
+    console.log('testRuns >>', this.testRunId);
 
-    let testRunTags = await this.addTestRunTags(testRunId, [
+    let testRunTags = await this.addTestRunTags(this.testRunId, [
       {
         key: 'group',
         value: 'Regression',
       },
     ]); // broke - labels does not appear in the UI
 
-    let testsExecutions = await this.startTestExecutions(testRunId, testResults.tests);
-    let testTags = await this.addTestTags(testRunId, testsExecutions.results);
-    let screenshots = await this.addScreenshots(testRunId, testsExecutions.results);
-    let testSteps = await this.sendTestSteps(testRunId, testsExecutions.results);
-    let endTestExecutions = await this.finishTestExecutions(testRunId, testsExecutions.results);
+    let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
+    let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
+    let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
+    let testSteps = await this.sendTestSteps(this.testRunId, testsExecutions.results);
+    let endTestExecutions = await this.finishTestExecutions(
+      this.testRunId,
+      testsExecutions.results
+    );
     let testSessions = await this.sendTestSessions(
-      testRunId,
+      this.testRunId,
       runStartTime,
       testsExecutions.results
     );
-    let stopTestRunsResult = await this.stopTestRuns(testRunId, new Date().toISOString());
+    let stopTestRunsResult = await this.stopTestRuns(this.testRunId, new Date().toISOString());
 
     let summary = {
       testsExecutions: {
         success: testsExecutions.results.length,
         errors: testsExecutions.errors.length,
+        results: testsExecutions.results,
       },
       testRunTags: {
         success: testRunTags.status === 204 ? 1 : 0,
@@ -128,7 +140,7 @@ class ZebRunnerReporter implements Reporter {
         success: stopTestRunsResult.status === 200 ? 1 : 0,
         errors: stopTestRunsResult.status !== 200 ? 1 : 0,
       },
-      resultsLink: testRunId
+      resultsLink: this.testRunId
         ? `${this.zebAgent.baseUrl}/projects/${this.zebAgent.projectKey}/test-runs/${this.testRunId}`
         : '',
     };

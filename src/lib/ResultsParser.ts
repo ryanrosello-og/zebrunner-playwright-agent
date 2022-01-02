@@ -61,10 +61,12 @@ export type testSummary = {
 export default class ResultsParser {
   private _resultsData: any;
   private _result: testRun;
-  private _config: zebrunnerConfig;
+  private _build: string;
+  private _environment: string;
 
   constructor(results, config: zebrunnerConfig) {
-    this._config = config;
+    this._build = process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString();
+    this._environment = process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-';
     this._result = {
       tests: [],
       testRunId: 0,
@@ -72,11 +74,19 @@ export default class ResultsParser {
       testRunName: `${process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()} ${
         process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'
       }`,
-      build: process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString(),
-      environment: process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-',
+      build: this._build,
+      environment: this._environment,
     };
     this._resultsData = results;
     console.log(this._resultsData);
+  }
+
+  public get build() {
+    return this._build;
+  }
+
+  public get environment() {
+    return this._environment;
   }
 
   async getParsedResults(): Promise<testRun> {
@@ -85,38 +95,6 @@ export default class ResultsParser {
 
   getRunStartTime(): number {
     return new Date(this._result.tests[0].startedAt).getTime() - 1000;
-  }
-
-  getTotalRunDuration(): number {
-    const earliestExecTime = Math.min(
-      ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
-    );
-    const latestExecTime = Math.max(
-      ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
-    );
-    return Math.ceil((latestExecTime - earliestExecTime) / 1000);
-  }
-
-  async getSummaryResults(): Promise<testSummary> {
-    return {
-      build: this._result.build,
-      environment: this._result.environment,
-      passed: this._result.tests.filter((t) => t.status === 'PASSED').length,
-      failed: this._result.tests.filter((t) => t.status === 'FAILED').length,
-      skipped: this._result.tests.filter((t) => t.status === 'SKIPPED').length,
-      aborted: this._result.tests.filter((t) => t.status === 'ABORTED').length,
-      duration: this.getTotalRunDuration(),
-      failures: this._result.tests
-        .filter((t) => t.status === 'FAILED')
-        .map((failures) => ({
-          zebResult: `${this._config.reporterBaseUrl}/projects/${this._config.projectKey}/test-runs/${failures.testRunId}/tests/${failures.testId}`,
-          test: failures.name,
-          message:
-            failures.reason.length > 180
-              ? failures.reason.substring(0, 180).replace(/(\r\n|\n|\r)/gm, '') + ' ...'
-              : failures.reason.replace(/(\r\n|\n|\r)/gm, ''),
-        })),
-    };
   }
 
   async parse() {
