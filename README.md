@@ -60,6 +60,21 @@ You can further customize the reporter by overriding these values:
 | reporterBaseUrl |         | The base url for your Zebrunner instance                                                                                                                                                    |   |
 | projectKey      |         | The Zebrunner project key.  e.g. DEF                                                                                                                                                        |   |
 
+# Slack Notification
+
+To enable slack notification, you must firstly generate ...
+
+<screenshots> genreate Oauth token for bot
+
+There are other configurable items available in order to customize the results posted into Slack
+
+<table>
+
+
+After successful configuration, you should now see results posted to Slack similar to the image below:
+
+<pic>
+
 # Contribution
 
 # License
