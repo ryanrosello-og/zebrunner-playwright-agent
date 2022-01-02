@@ -45,10 +45,8 @@ class ZebRunnerReporter implements Reporter {
     // post to Slack (if enabled)
     this.slackReporter = new SlackReporter(this.config);
     if (this.slackReporter.isEnabled) {
-      this.slackReporter.sendMessage(
-        resultsParser.getSummaryResults(),
-        zebrunnerResults.resultsLink
-      );
+      let testSummary = await resultsParser.getSummaryResults();
+      await this.slackReporter.sendMessage(testSummary, zebrunnerResults.resultsLink);
     }
   }
 

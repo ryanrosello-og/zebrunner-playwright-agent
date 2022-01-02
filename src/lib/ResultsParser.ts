@@ -93,8 +93,8 @@ export default class ResultsParser {
           test: failures.name,
           message:
             failures.reason.length > 100
-              ? failures.reason.substring(0, 100) + ' ...'
-              : failures.reason,
+              ? failures.reason.substring(0, 100).replace(/(\r\n|\n|\r)/gm, '') + ' ...'
+              : failures.reason.replace(/(\r\n|\n|\r)/gm, ''),
         })),
     };
   }
