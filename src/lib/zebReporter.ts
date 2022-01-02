@@ -5,17 +5,38 @@ import ResultsParser, {testResult, testRun, testSuite} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
 
+export type zebrunnerConfig = {
+  projectKey: string;
+  reporterBaseUrl: string;
+  enabled: boolean;
+  concurrentTasks: number;
+  postToSlack: boolean;
+  notifyOnlyOnFailures: boolean;
+  slackReportingChannels: string;
+};
+
 class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
+  private zebConfig: zebrunnerConfig;
   private zebAgent: ZebAgent;
   private slackReporter: SlackReporter;
   private testRunId: number;
 
   onBegin(config: FullConfig, suite: Suite) {
+    const configKeys = config.reporter.filter((f) => f[0].includes('zeb') || f[1]?.includes('zeb'));
+    this.zebConfig = {
+      projectKey: configKeys[0][1].projectKey,
+      reporterBaseUrl: configKeys[0][1].reporterBaseUrl,
+      enabled: configKeys[0][1].enabled,
+      concurrentTasks: configKeys[0][1].concurrentTasks,
+      postToSlack: configKeys[0][1].postToSlack,
+      notifyOnlyOnFailures: configKeys[0][1].notifyOnlyOnFailures,
+      slackReportingChannels: configKeys[0][1].slackReportingChannels,
+    };
     this.config = config;
     this.suite = suite;
-    this.zebAgent = new ZebAgent(this.config);
+    this.zebAgent = new ZebAgent(this.zebConfig);
   }
 
   async onEnd() {
@@ -25,7 +46,7 @@ class ZebRunnerReporter implements Reporter {
     }
     await this.zebAgent.initialize();
 
-    let resultsParser = new ResultsParser(this.suite);
+    let resultsParser = new ResultsParser(this.suite, this.zebConfig);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
     console.log(parsedResults);
@@ -43,7 +64,7 @@ class ZebRunnerReporter implements Reporter {
     console.timeEnd('Duration');
 
     // post to Slack (if enabled)
-    this.slackReporter = new SlackReporter(this.config);
+    this.slackReporter = new SlackReporter(this.zebConfig);
     if (this.slackReporter.isEnabled) {
       let testSummary = await resultsParser.getSummaryResults();
       await this.slackReporter.sendMessage(testSummary, zebrunnerResults.resultsLink);

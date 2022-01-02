@@ -1,3 +1,5 @@
+import {zebrunnerConfig} from './zebReporter';
+
 export type testResult = {
   suiteName: string;
   name: string;
@@ -41,11 +43,28 @@ export type testRun = {
   environment: string;
 };
 
+export type testSummary = {
+  build: string;
+  environment: string;
+  passed: number;
+  failed: number;
+  skipped: number;
+  aborted: number;
+  duration: number;
+  failures: {
+    zebResult: string;
+    test: string;
+    message: string;
+  }[];
+};
+
 export default class ResultsParser {
   private _resultsData: any;
   private _result: testRun;
+  private _config: zebrunnerConfig;
 
-  constructor(results) {
+  constructor(results, config: zebrunnerConfig) {
+    this._config = config;
     this._result = {
       tests: [],
       testRunId: 0,
@@ -72,13 +91,13 @@ export default class ResultsParser {
     const earliestExecTime = Math.min(
       ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
     );
-    const latestExecTime = Math.min(
+    const latestExecTime = Math.max(
       ...this._result.tests.map((t) => new Date(t.startedAt).getTime())
     );
     return Math.ceil((latestExecTime - earliestExecTime) / 1000);
   }
 
-  async getSummaryResults() {
+  async getSummaryResults(): Promise<testSummary> {
     return {
       build: this._result.build,
       environment: this._result.environment,
@@ -90,10 +109,11 @@ export default class ResultsParser {
       failures: this._result.tests
         .filter((t) => t.status === 'FAILED')
         .map((failures) => ({
+          zebResult: `${this._config.reporterBaseUrl}/projects/${this._config.projectKey}/test-runs/${failures.testRunId}/tests/${failures.testId}`,
           test: failures.name,
           message:
-            failures.reason.length > 100
-              ? failures.reason.substring(0, 100).replace(/(\r\n|\n|\r)/gm, '') + ' ...'
+            failures.reason.length > 180
+              ? failures.reason.substring(0, 180).replace(/(\r\n|\n|\r)/gm, '') + ' ...'
               : failures.reason.replace(/(\r\n|\n|\r)/gm, ''),
         })),
     };

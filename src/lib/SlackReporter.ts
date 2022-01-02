@@ -1,4 +1,6 @@
 import {WebClient, LogLevel} from '@slack/web-api';
+import {testSummary} from './ResultsParser';
+import {zebrunnerConfig} from './zebReporter';
 
 export default class SlackReporter {
   private _slackClient: WebClient;
@@ -6,11 +8,8 @@ export default class SlackReporter {
   private _enabled: boolean;
   private _notifyOnlyOnFailures: boolean = false;
 
-  constructor(config: {reporter: any[]}) {
-    const zebRunnerConf = config.reporter.filter(
-      (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
-    );
-    this._enabled = zebRunnerConf[0][1].postToSlack;
+  constructor(config: zebrunnerConfig) {
+    this._enabled = config.postToSlack;
     if (!this._enabled) {
       console.log('Slack reporter disabled - skipped posting results to Slack');
       return;
@@ -20,16 +19,16 @@ export default class SlackReporter {
       throw new Error('environment variable: SLACK_BOT_USER_OAUTH_TOKEN  was not supplied');
     }
 
-    if (zebRunnerConf[0][1].notifyOnlyOnFailures) {
+    if (config.notifyOnlyOnFailures) {
       this._notifyOnlyOnFailures = true;
     }
 
-    if (!zebRunnerConf[0][1].slackReportingChannels) {
+    if (!config.slackReportingChannels) {
       throw new Error(
         'No value was set for the "reportingChannels" configuration, this needs a comma separate values to instruct the bot which channel(s) to send the reports'
       );
     } else {
-      this._channelIds = zebRunnerConf[0][1].slackReportingChannels.split(',');
+      this._channelIds = config.slackReportingChannels.split(',');
     }
 
     this._slackClient = new WebClient(process.env.SLACK_BOT_USER_OAUTH_TOKEN, {
@@ -37,7 +36,7 @@ export default class SlackReporter {
     });
   }
 
-  async sendMessage(summaryResults, zeburunnerRunLink: string) {
+  async sendMessage(summaryResults: testSummary, zeburunnerRunLink: string) {
     if (!this._enabled) {
       console.log('Slack reporter disabled - skipped posting results to Slack');
       return;
@@ -55,7 +54,7 @@ export default class SlackReporter {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `* <https://google.com|${failedTest.test}>*\n>${failedTest.message}`,
+          text: `*${failedTest.test}* <${failedTest.zebResult}|:information_source:>\n>${failedTest.message}`,
         },
       });
     }
@@ -64,14 +63,25 @@ export default class SlackReporter {
       try {
         const result = await this._slackClient.chat.postMessage({
           channel: channelId,
-          text: summaryResults,
-
+          text: ' ',
           blocks: [
             {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `:white_check_mark: *${summaryResults.passed}* Tests ran successfully \n :red_circle: *${summaryResults.failed}* Tests failed`,
+                text: `:white_check_mark: *${
+                  summaryResults.passed
+                }* Tests ran successfully \n\n :red_circle: *${
+                  summaryResults.failed
+                }* Tests failed \n\n ${
+                  summaryResults.skipped > 0
+                    ? ':fast_forward: *' + summaryResults.skipped + '* skipped'
+                    : ''
+                } \n\n ${
+                  summaryResults.aborted > 0
+                    ? ':exclamation: *' + summaryResults.aborted + '* aborted'
+                    : ''
+                }`,
               },
               accessory: {
                 type: 'button',
@@ -84,6 +94,23 @@ export default class SlackReporter {
                 url: zeburunnerRunLink,
                 action_id: 'button-action',
               },
+            },
+            {
+              type: 'section',
+              fields: [
+                {
+                  type: 'mrkdwn',
+                  text: `*Environment:*\n${summaryResults.environment}`,
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Duration:*\n${summaryResults.duration}`,
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Build:*\n${summaryResults.build}`,
+                },
+              ],
             },
             {
               type: 'divider',

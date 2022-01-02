@@ -5,7 +5,7 @@ import SlackReporter from '../src/lib/SlackReporter';
 
 test.skip('slocak @unit_test', async () => {
   const slack = new SlackReporter(null);
-  slack.sendMessage('', '');
+  // slack.sendMessage('', '');
   // const client = new WebClient('xoxb-nope', {
   //   logLevel: LogLevel.DEBUG,
   // });
