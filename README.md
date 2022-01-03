@@ -73,9 +73,13 @@ e.g.
 There are other configurable items available in order to customize the results posted into Slack
 
 **slackEnabled** <default: true> - when true, the reporter will post the test summary to the desired Slack channels
+
 **slackDisplayNumberOfFailures**: <default: 10> -  How many failed tests will be show in the Slack message
+
 **slackReportOnlyOnFailures**: <default: true> - Slack message will only be posted if at least 1 failed test exists
+
 **slackReportingChannels**: e.g.'zeb,general' - comma separated values denoting the channel(s) where the test summary will be posted to
+
 **slackStacktraceLength**: <default: 270> - the maximum number of characters from the stack trace to be included in the summary for each failed test
 
 The snippet below shows a typical configuration of the reporter:
@@ -99,7 +103,7 @@ The snippet below shows a typical configuration of the reporter:
   ],
 ```
 
-The example above will send the test summary results to both the #zeb and #general channels.  It will only post results if more than 1 failed test is encountered.  Only the first 10 failures will be sent and the length of the stack trace will be limited to 270 characters.
+The example above will send the test summary results to both the `#zeb` and `#general` channels.  It will only post results if more than 1 failed test is encountered.  Only the first 10 failures will be sent and the length of the stack trace will be limited to 270 characters.
 
 After successful configuration, you should now see results posted to Slack similar to the image below:
 
