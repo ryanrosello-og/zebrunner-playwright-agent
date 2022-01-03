@@ -61,9 +61,9 @@ export default class SlackReporter {
           test: failures.name,
           message:
             failures.reason.length > maximumCharLength
-              ? failures.reason.substring(0, maximumCharLength).replace(/(\r\n|\n|\r)/gm, ' ') +
+              ? failures.reason.substring(0, maximumCharLength).replace(/(\r\n|\n|\r)/gm, '\n>') +
                 ' ...'
-              : failures.reason.replace(/(\r\n|\n|\r)/gm, ' '),
+              : failures.reason.replace(/(\r\n|\n|\r)/gm, '\n>'),
         })),
     };
   }
@@ -92,7 +92,7 @@ export default class SlackReporter {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${failedTest.test}* <${failedTest.zebResult}|:information_source:>\n>${failedTest.message}`,
+          text: `*${failedTest.test}* <${failedTest.zebResult}|:information_source:>\n\n>${failedTest.message}`,
         },
       });
     }
