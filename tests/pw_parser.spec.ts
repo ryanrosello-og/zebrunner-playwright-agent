@@ -97,7 +97,7 @@ const test = base.extend<ParserFixture>({
     tests: [],
   },
   parsedResults: async ({testData}, use) => {
-    let resultsParser = new ResultsParser(testData);
+    let resultsParser = new ResultsParser(testData, null);
     await resultsParser.parse();
     let r = await resultsParser.getParsedResults();
     await use(r);

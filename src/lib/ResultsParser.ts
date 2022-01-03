@@ -1,3 +1,5 @@
+import {zebrunnerConfig} from './zebReporter';
+
 export type testResult = {
   suiteName: string;
   name: string;
@@ -36,24 +38,63 @@ export type testRun = {
   tests: testResult[];
   testRunId?: number;
   title: string;
+  testRunName: string;
+  build: string;
+  environment: string;
+};
+
+export type testSummary = {
+  build: string;
+  environment: string;
+  passed: number;
+  failed: number;
+  skipped: number;
+  aborted: number;
+  duration: number;
+  failures: {
+    zebResult: string;
+    test: string;
+    message: string;
+  }[];
 };
 
 export default class ResultsParser {
   private _resultsData: any;
   private _result: testRun;
+  private _build: string;
+  private _environment: string;
 
-  constructor(results) {
+  constructor(results, config: zebrunnerConfig) {
+    this._build = process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString();
+    this._environment = process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-';
     this._result = {
       tests: [],
       testRunId: 0,
       title: '',
+      testRunName: `${process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()} ${
+        process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'
+      }`,
+      build: this._build,
+      environment: this._environment,
     };
     this._resultsData = results;
     console.log(this._resultsData);
   }
 
+  public get build() {
+    return this._build;
+  }
+
+  public get environment() {
+    return this._environment;
+  }
+
   async getParsedResults(): Promise<testRun> {
     return this._result;
+  }
+
+  getRunStartTime(): number {
+    return new Date(this._result.tests[0].startedAt).getTime() - 1000;
   }
 
   async parse() {

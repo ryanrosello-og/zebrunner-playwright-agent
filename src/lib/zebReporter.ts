@@ -1,19 +1,46 @@
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
-import ResultsParser, {testResult, testRun, testSuite} from './ResultsParser';
+import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
+import SlackReporter from './SlackReporter';
+
+export type zebrunnerConfig = {
+  projectKey: string;
+  reporterBaseUrl: string;
+  enabled: boolean;
+  concurrentTasks: number;
+  slackEnabled: boolean;
+  slackReportOnlyOnFailures: boolean;
+  slackDisplayNumberOfFailures: number;
+  slackReportingChannels: string;
+  slackStacktraceLength: number;
+};
 
 class ZebRunnerReporter implements Reporter {
   private config!: FullConfig;
   private suite!: Suite;
+  private zebConfig: zebrunnerConfig;
   private zebAgent: ZebAgent;
+  private slackReporter: SlackReporter;
   private testRunId: number;
 
   onBegin(config: FullConfig, suite: Suite) {
+    const configKeys = config.reporter.filter((f) => f[0].includes('zeb') || f[1]?.includes('zeb'));
+    this.zebConfig = {
+      projectKey: configKeys[0][1].projectKey,
+      reporterBaseUrl: configKeys[0][1].reporterBaseUrl,
+      enabled: configKeys[0][1].enabled,
+      concurrentTasks: configKeys[0][1].concurrentTasks,
+      slackEnabled: configKeys[0][1].slackEnabled,
+      slackReportOnlyOnFailures: configKeys[0][1].slackReportOnlyOnFailures,
+      slackDisplayNumberOfFailures: configKeys[0][1].slackDisplayNumberOfFailures,
+      slackReportingChannels: configKeys[0][1].slackReportingChannels,
+      slackStacktraceLength: configKeys[0][1].slackStacktraceLength,
+    };
     this.config = config;
     this.suite = suite;
-    this.zebAgent = new ZebAgent(this.config);
+    this.zebAgent = new ZebAgent(this.zebConfig);
   }
 
   async onEnd() {
@@ -23,12 +50,18 @@ class ZebRunnerReporter implements Reporter {
     }
     await this.zebAgent.initialize();
 
-    let resultsParser = new ResultsParser(this.suite);
+    let resultsParser = new ResultsParser(this.suite, this.zebConfig);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
     console.log(parsedResults);
     console.time('Duration');
-    let zebrunnerResults = await this.postResultsToZebRunner(parsedResults);
+    let zebrunnerResults = await this.postResultsToZebRunner(
+      resultsParser.getRunStartTime(),
+      parsedResults
+    );
+
+    const slackResults = zebrunnerResults.testsExecutions.results;
+    delete zebrunnerResults.testsExecutions.results; // omit results from printing
     console.log(zebrunnerResults);
     console.log(
       zebrunnerResults.resultsLink !== ''
@@ -36,39 +69,52 @@ class ZebRunnerReporter implements Reporter {
         : ''
     );
     console.timeEnd('Duration');
+
+    // post to Slack (if enabled)
+    this.slackReporter = new SlackReporter(this.zebConfig);
+    if (this.slackReporter.isEnabled) {
+      let testSummary = await this.slackReporter.getSummaryResults(
+        this.testRunId,
+        slackResults,
+        resultsParser.build,
+        resultsParser.environment
+      );
+      await this.slackReporter.sendMessage(testSummary, zebrunnerResults.resultsLink);
+    }
   }
 
-  async postResultsToZebRunner(testResults: testRun) {
-    let runStartTime = new Date(testResults.tests[0].startedAt).getTime() - 1000;
-    let testRunName = `${
-      process.env.BUILD_INFO ? process.env.BUILD_INFO : new Date().toISOString()
-    } ${process.env.TEST_ENVIRONMENT ? process.env.TEST_ENVIRONMENT : '-'}`;
-    let testRunId = await this.startTestRuns(runStartTime, testRunName);
-    console.log('testRuns >>', testRunId);
+  async postResultsToZebRunner(runStartTime: number, testResults: testRun) {
+    let testRunName = testResults.testRunName;
+    await this.startTestRuns(runStartTime, testRunName);
+    console.log('testRuns >>', this.testRunId);
 
-    let testRunTags = await this.addTestRunTags(testRunId, [
+    let testRunTags = await this.addTestRunTags(this.testRunId, [
       {
         key: 'group',
         value: 'Regression',
       },
     ]); // broke - labels does not appear in the UI
 
-    let testsExecutions = await this.startTestExecutions(testRunId, testResults.tests);
-    let testTags = await this.addTestTags(testRunId, testsExecutions.results);
-    let screenshots = await this.addScreenshots(testRunId, testsExecutions.results);
-    let testSteps = await this.sendTestSteps(testRunId, testsExecutions.results);
-    let endTestExecutions = await this.finishTestExecutions(testRunId, testsExecutions.results);
+    let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
+    let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
+    let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
+    let testSteps = await this.sendTestSteps(this.testRunId, testsExecutions.results);
+    let endTestExecutions = await this.finishTestExecutions(
+      this.testRunId,
+      testsExecutions.results
+    );
     let testSessions = await this.sendTestSessions(
-      testRunId,
+      this.testRunId,
       runStartTime,
       testsExecutions.results
     );
-    let stopTestRunsResult = await this.stopTestRuns(testRunId, new Date().toISOString());
+    let stopTestRunsResult = await this.stopTestRuns(this.testRunId, new Date().toISOString());
 
     let summary = {
       testsExecutions: {
         success: testsExecutions.results.length,
         errors: testsExecutions.errors.length,
+        results: testsExecutions.results,
       },
       testRunTags: {
         success: testRunTags.status === 204 ? 1 : 0,
@@ -98,7 +144,7 @@ class ZebRunnerReporter implements Reporter {
         success: stopTestRunsResult.status === 200 ? 1 : 0,
         errors: stopTestRunsResult.status !== 200 ? 1 : 0,
       },
-      resultsLink: testRunId
+      resultsLink: this.testRunId
         ? `${this.zebAgent.baseUrl}/projects/${this.zebAgent.projectKey}/test-runs/${this.testRunId}`
         : '',
     };
