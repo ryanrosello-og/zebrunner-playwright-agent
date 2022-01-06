@@ -3,8 +3,7 @@ const projectKey = 'TEST';
 const testRunId = 1000;
 const testId = 942;
 const sessionId = '3706ef44-605c-4c53-8ac7-b4230e058f47';
-
-const http = require('http')
+const http = require('https')
 
 const startServer = async () => {
   return new Promise((resolve) => {
@@ -42,6 +41,12 @@ const startServer = async () => {
           case `/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/screenshots`:
             responseCode = 201;
             break;
+          // // case `/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/artifacts`:
+          // //   responseCode = 201;
+          // //   break;
+          // // case `/api/reporting/v1/test-runs/${testRunId}/test-sessions/${testSessionId}/artifacts`:
+          // //   responseCode = 201;
+          // //   break;  
           case `/api/reporting/v1/test-runs/${testRunId}/tests/${testId}/labels`:
             responseCode = 204;
             break;
