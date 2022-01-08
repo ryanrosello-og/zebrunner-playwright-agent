@@ -185,11 +185,11 @@ export default class ZebAgent {
           headers: {
             Authorization: this._refreshToken,
             'Content-Type': 'image/png',
-            'x-zbr-screenshot-captured-at': screenshot.timestamp
+            'x-zbr-screenshot-captured-at': screenshot.timestamp,
           },
         },
       });
-    })
+    });
 
     const response = await Promise.all(screenshotsPromises);
 
@@ -200,38 +200,38 @@ export default class ZebAgent {
     testRunId?: number,
     testId?: number,
     artifactsAttachments?: Record<string, string>[]
-    ): Promise<AxiosResponse> {
-      if (artifactsAttachments.length === 0) {
-        return;
-      }
-      try {
-        const artifactsPromises = artifactsAttachments.map((file) => {
-          const formData = new FormData();
-          formData.append('file', fs.createReadStream(file.path));
-          const endpoint = this._urls.urlTestArtifacts(testRunId, testId);
-          const contentTypeHeader = formData.getHeaders()['content-type'];
-          return this._api.post({
-            url: endpoint.url,
-            payload: formData,
-            expectedStatusCode: endpoint.status,
-            config: {
-              headers: {
-                Authorization: this._refreshToken,
-                'Content-Type': contentTypeHeader,
-                'Accept': '*/*',
-              },
-            },
-          });
-        })
-        const response = await Promise.all(artifactsPromises);
-        return response[0];
-      } catch(e) {
-        console.log(e)
-      }
+  ): Promise<AxiosResponse> {
+    if (artifactsAttachments.length === 0) {
+      return;
     }
+    try {
+      const artifactsPromises = artifactsAttachments.map((file) => {
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(file.path));
+        const endpoint = this._urls.urlTestArtifacts(testRunId, testId);
+        const contentTypeHeader = formData.getHeaders()['content-type'];
+        return this._api.post({
+          url: endpoint.url,
+          payload: formData,
+          expectedStatusCode: endpoint.status,
+          config: {
+            headers: {
+              Authorization: this._refreshToken,
+              'Content-Type': contentTypeHeader,
+              Accept: '*/*',
+            },
+          },
+        });
+      });
+      const response = await Promise.all(artifactsPromises);
+      return response[0];
+    } catch (e) {
+      console.log(e);
+    }
+  }
 
   async sendVideoArtifacts(
-    testRunId:number,
+    testRunId: number,
     testSessionId: number,
     videoPathsArray: Record<string, string>[]
   ) {
@@ -254,12 +254,12 @@ export default class ZebAgent {
           headers: {
             Authorization: this._refreshToken,
             'Content-Type': contentTypeHeader,
-            'Accept': '*/*',
+            Accept: '*/*',
             'x-zbr-video-content-length': fileSize,
           },
         },
       });
-    })
+    });
 
     const response = await Promise.all(promise);
     return response[0];
@@ -270,7 +270,7 @@ export default class ZebAgent {
     const fileSizeInBytes = stats.size;
     console.log('size', fileSizeInBytes);
     return fileSizeInBytes;
-  }
+  };
 
   async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse> {
     if (logs.length <= 0) return;
@@ -341,7 +341,7 @@ export default class ZebAgent {
       },
       testIds: options.testIds,
     };
-    
+
     const endpoint = this._urls.urlStartSession(options.testRunId);
     let r = await this._api.post({
       url: endpoint.url,

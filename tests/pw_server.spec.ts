@@ -162,6 +162,14 @@ test.describe('zebrunner upload', async () => {
         success: 1,
         errors: 0,
       },
+      videoArtifacts: {
+        errors: 0,
+        success: 0,
+      },
+      testArtifacts: {
+        errors: 0,
+        success: 0,
+      },
       testRunTags: {
         success: 1,
         errors: 0,

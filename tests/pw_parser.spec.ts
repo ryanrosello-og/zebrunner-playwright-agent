@@ -129,7 +129,7 @@ test('parses test failure details from the results @unit_test', async ({parsedRe
 });
 
 test('parses path to the screenshot from the results @unit_test', async ({parsedResults}) => {
-  expect(parsedResults.tests[0].attachment).toEqual(
+  expect(parsedResults.tests[0].attachment.screenshots[0].path).toEqual(
     '/Users/it/repo/pw-zeb/test-results/tests-pw_nested_testsuite-nested-foo-foo-l2-basic-test-broke-webkit/test-failed-1.png'
   );
 });
