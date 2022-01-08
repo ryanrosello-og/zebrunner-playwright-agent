@@ -2,10 +2,14 @@ import {AxiosResponse} from 'axios';
 import Logger from '../lib/Logger';
 import Api from './Api';
 import Urls from './Urls';
-import {readFileSync} from 'fs';
+import * as path from 'path';
+import * as fs from 'fs';
 import {randomUUID} from 'crypto';
 import {testStep} from './ResultsParser';
 import {zebrunnerConfig} from './zebReporter';
+
+const FormData = require('form-data');
+const webmToMp4 = require('webm-to-mp4');
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -166,24 +170,106 @@ export default class ZebAgent {
   async attachScreenshot(
     testRunId?: number,
     testId?: number,
-    imagePath?: string
+    screenshotsArray?: Record<string, number>[]
   ): Promise<AxiosResponse> {
-    if (!imagePath) return;
+    if (screenshotsArray.length === 0) return;
 
-    const file = readFileSync(imagePath);
-    const endpoint = this._urls.urlScreenshots(testRunId, testId);
-    let r = await this._api.post({
-      url: endpoint.url,
-      payload: Buffer.from(file),
-      expectedStatusCode: endpoint.status,
-      config: {
-        headers: {
-          Authorization: this._refreshToken,
-          'Content-Type': 'image/png',
+    const screenshotsPromises = screenshotsArray.map((screenshot) => {
+      const file = fs.readFileSync(screenshot.path);
+      const endpoint = this._urls.urlScreenshots(testRunId, testId);
+      return this._api.post({
+        url: endpoint.url,
+        payload: Buffer.from(file),
+        expectedStatusCode: endpoint.status,
+        config: {
+          headers: {
+            Authorization: this._refreshToken,
+            'Content-Type': 'image/png',
+            'x-zbr-screenshot-captured-at': screenshot.timestamp
+          },
         },
-      },
-    });
-    return r;
+      });
+    })
+
+    const response = await Promise.all(screenshotsPromises);
+
+    return response[0];
+  }
+
+  async attachTestArtifacts(
+    testRunId?: number,
+    testId?: number,
+    artifactsAttachments?: Record<string, string>[]
+    ): Promise<AxiosResponse> {
+      if (artifactsAttachments.length === 0) {
+        return;
+      }
+      try {
+        const artifactsPromises = artifactsAttachments.map((file) => {
+          const formData = new FormData();
+          formData.append('file', fs.createReadStream(file.path));
+          const endpoint = this._urls.urlTestArtifacts(testRunId, testId);
+          const contentTypeHeader = formData.getHeaders()['content-type'];
+          return this._api.post({
+            url: endpoint.url,
+            payload: formData,
+            expectedStatusCode: endpoint.status,
+            config: {
+              headers: {
+                Authorization: this._refreshToken,
+                'Content-Type': contentTypeHeader,
+                'Accept': '*/*',
+              },
+            },
+          });
+        })
+        const response = await Promise.all(artifactsPromises);
+        return response[0];
+      } catch(e) {
+        console.log(e)
+      }
+    }
+
+  async sendVideoArtifacts(
+    testRunId:number,
+    testSessionId: number,
+    videoPathsArray: Record<string, string>[]
+  ) {
+    if (videoPathsArray.length === 0) {
+      return;
+    }
+
+    const promise = videoPathsArray.map((video) => {
+      const formData = new FormData();
+
+      formData.append('video', fs.createReadStream(video.path));
+      const endpoint = this._urls.urlSessionArtifacts(testRunId, testSessionId);
+      const contentTypeHeader = formData.getHeaders()['content-type'];
+      const fileSize = this._getFileSizeInBytes(video.path);
+      return this._api.post({
+        url: endpoint.url,
+        payload: formData,
+        expectedStatusCode: endpoint.status,
+        config: {
+          headers: {
+            Authorization: this._refreshToken,
+            'Content-Type': contentTypeHeader,
+            'Accept': '*/*',
+            'x-zbr-video-content-length': fileSize,
+          },
+        },
+      });
+    })
+
+    const response = await Promise.all(promise);
+    return response[0];
+  }
+
+  _getFileSizeInBytes = (filename) => {
+    const stats = fs.statSync(filename);
+    const fileSizeInBytes = stats.size;
+    console.log('size', fileSizeInBytes);
+    return fileSizeInBytes;
   }
 
   async addTestLogs(testRunId: number, logs: testStep[]): Promise<AxiosResponse> {
@@ -255,6 +341,7 @@ export default class ZebAgent {
       },
       testIds: options.testIds,
     };
+    
     const endpoint = this._urls.urlStartSession(options.testRunId);
     let r = await this._api.post({
       url: endpoint.url,

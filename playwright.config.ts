@@ -5,6 +5,7 @@ const config: PlaywrightTestConfig = {
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   use: {
+    video: 'on',
     trace: 'on',
     screenshot: 'only-on-failure',
   },
@@ -24,9 +25,9 @@ const config: PlaywrightTestConfig = {
   ],
   reporter: [
     [
-      './src/lib/zebReporter.js',
+      './src/lib/zebReporter.ts',
       {
-        reporterBaseUrl: 'https://default.zebrunner.com',
+        reporterBaseUrl: 'https://webdriver.zebrunner.com',
         projectKey: 'DEF',
         enabled: true,
         concurrentTasks: 19,

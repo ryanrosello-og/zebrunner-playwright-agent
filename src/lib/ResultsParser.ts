@@ -5,7 +5,11 @@ export type testResult = {
   name: string;
   testId?: number;
   testRunId?: number;
-  attachment?: string;
+  attachment?: {
+    video: Record<string, string>[],
+    files: Record<string, string>[],
+    screenshots: Record<string, number>[],
+  };
   browser: string;
   endedAt: string;
   reason: string;
@@ -78,7 +82,7 @@ export default class ResultsParser {
       environment: this._environment,
     };
     this._resultsData = results;
-    console.log(this._resultsData);
+    // console.log(this._resultsData);
   }
 
   public get build() {
@@ -167,7 +171,6 @@ export default class ResultsParser {
 
   async parseTests(suiteName, tests) {
     let testResults: testResult[] = [];
-
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
       for (const result of test.results) {
@@ -216,11 +219,32 @@ export default class ResultsParser {
 
   processAttachment(attachment) {
     if (attachment) {
-      let screenshot = attachment.filter((a) => a.contentType === 'image/png');
-      if (screenshot.length > 0) {
-        // TODO: there could be more than one screenshot?
-        return screenshot[0].path;
-      }
+      let attachmentObj = {
+        video: [],
+        files: [],
+        screenshots: [],
+      };
+      attachment.forEach((el) => {
+        if (el.contentType === 'video/webm') {
+          attachmentObj.video.push({
+            path: el.path,
+            timestamp: Date.now(),
+          })
+        }
+        if (el.contentType === 'application/zip') {
+          attachmentObj.files.push({
+            path: el.path,
+            timestamp: Date.now(),
+          })
+        }
+        if (el.contentType === 'image/png') {
+          attachmentObj.screenshots.push({
+            path: el.path,
+            timestamp: Date.now(),
+          })
+        }
+      });
+      return attachmentObj;
     }
     return null;
   }

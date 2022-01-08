@@ -53,7 +53,6 @@ class ZebRunnerReporter implements Reporter {
     let resultsParser = new ResultsParser(this.suite, this.zebConfig);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
-    console.log(parsedResults);
     console.time('Duration');
     let zebrunnerResults = await this.postResultsToZebRunner(
       resultsParser.getRunStartTime(),
@@ -95,20 +94,24 @@ class ZebRunnerReporter implements Reporter {
       },
     ]); // broke - labels does not appear in the UI
 
-    let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
-    let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
-    let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
-    let testSteps = await this.sendTestSteps(this.testRunId, testsExecutions.results);
-    let endTestExecutions = await this.finishTestExecutions(
-      this.testRunId,
-      testsExecutions.results
-    );
+    let testsExecutions = await this.startTestExecutions(testRunId, testResults.tests);
+    let testTags = await this.addTestTags(testRunId, testsExecutions.results);
+    let screenshots = await this.addScreenshots(testRunId, testsExecutions.results);
+    let testArtifacts = await this.addTestArtifacts(testRunId, testsExecutions.results);
+    let testSteps = await this.sendTestSteps(testRunId, testsExecutions.results);
+    let endTestExecutions = await this.finishTestExecutions(testRunId, testsExecutions.results);
+
     let testSessions = await this.sendTestSessions(
       this.testRunId,
       runStartTime,
       testsExecutions.results
     );
-    let stopTestRunsResult = await this.stopTestRuns(this.testRunId, new Date().toISOString());
+
+    let videoArtifacts = await this.addVideoArtifacts(
+      testRunId,
+      testSessions.sessionsIdArray,
+      testsExecutions.results);
+    let stopTestRunsResult = await this.stopTestRuns(testRunId, new Date().toISOString());
 
     let summary = {
       testsExecutions: {
@@ -127,6 +130,14 @@ class ZebRunnerReporter implements Reporter {
       screenshots: {
         success: screenshots.results.filter((f) => f && f.status === 201).length,
         errors: screenshots.errors.length,
+      },
+      testArtifacts: {
+        success: testArtifacts.results.filter((f) => f && f.status === 201).length,
+        errors: testArtifacts.errors.length,
+      },
+      videoArtifacts: {
+        success: videoArtifacts.results.filter((f) => f && f.status === 201).length,
+        errors: videoArtifacts.errors.length,
       },
       testStepsRequests: {
         success: testSteps.status === 202 ? 1 : 0,
@@ -197,11 +208,22 @@ class ZebRunnerReporter implements Reporter {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
-        let r = await this.zebAgent.attachScreenshot(testRunId, test.testId, test.attachment);
+        let r = await this.zebAgent.attachScreenshot(testRunId, test.testId, test.attachment.screenshots);
         return r;
       });
 
     return {results, errors};
+  }
+
+  async addTestArtifacts(testRunId: number, tests) {
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+    .for(tests)
+    .process(async (test: testResult, index, pool) => {
+      let r = await this.zebAgent.attachTestArtifacts(testRunId, test.testId, test.attachment.files);
+      return r;
+    });
+
+  return {results, errors};
   }
 
   async sendTestSteps(testRunId: number, testResults: testResult[]) {
@@ -250,14 +272,8 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async sendTestSessions(testRunId: number, runStartTime: number, tests: testResult[]) {
-    const groupBy = (array, key) => {
-      return array.reduce((result, currentValue) => {
-        (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
-        return result;
-      }, {});
-    };
-
-    const testSuitesGrouped = groupBy(tests, 'suiteName');
+    let sessionsIdArray = [];
+    const testSuitesGrouped = this._groupBy(tests, 'suiteName');
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(Object.entries(testSuitesGrouped))
       .process(async (suite: [string, testResult[]], index, pool) => {
@@ -268,17 +284,42 @@ class ZebRunnerReporter implements Reporter {
           testIds: suite[1].map((t) => t.testId),
         });
 
-        let r = await this.zebAgent.finishTestSession(
+        let res = await this.zebAgent.finishTestSession(
           sess.data.id,
           testRunId,
           new Date(runStartTime + 1).toISOString(),
           suite[1].map((t) => t.testId)
         );
-
-        return r;
+        
+        sessionsIdArray.push(sess.data.id);
+        return res
       });
 
-    return {results, errors};
+    return {sessionsIdArray, results, errors};
   }
+
+  async addVideoArtifacts(testRunId: number, sessionsIdArray: number[], tests: testResult[]) {
+    const testSuitesGrouped = this._groupBy(tests, 'suiteName');
+    const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
+      .for(Object.entries(testSuitesGrouped))
+      .process(async (suite: [string, testResult[]], index, pool) => {
+        const promise = suite[1].map((test) => {
+          return this.zebAgent.sendVideoArtifacts(testRunId, sessionsIdArray[index], test.attachment.video);
+        })
+        const response = await Promise.all(promise);
+        
+        return response.map((res) => res);
+      });
+      const result = results.flat();
+
+    return {results:result, errors};
+  }
+
+  _groupBy(array, key) {
+    return array.reduce((result, currentValue) => {
+      (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+      return result;
+    }, {});
+  };
 }
 export default ZebRunnerReporter;
