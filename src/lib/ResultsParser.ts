@@ -6,9 +6,9 @@ export type testResult = {
   testId?: number;
   testRunId?: number;
   attachment?: {
-    video: Record<string, string>[],
-    files: Record<string, string>[],
-    screenshots: Record<string, number>[],
+    video: Record<string, string>[];
+    files: Record<string, string>[];
+    screenshots: Record<string, number>[];
   };
   browser: string;
   endedAt: string;
@@ -229,19 +229,19 @@ export default class ResultsParser {
           attachmentObj.video.push({
             path: el.path,
             timestamp: Date.now(),
-          })
+          });
         }
         if (el.contentType === 'application/zip') {
           attachmentObj.files.push({
             path: el.path,
             timestamp: Date.now(),
-          })
+          });
         }
         if (el.contentType === 'image/png') {
           attachmentObj.screenshots.push({
             path: el.path,
             timestamp: Date.now(),
-          })
+          });
         }
       });
       return attachmentObj;
