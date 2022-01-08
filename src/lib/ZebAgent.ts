@@ -6,6 +6,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {randomUUID} from 'crypto';
 import {testStep} from './ResultsParser';
+import {zebrunnerConfig} from './zebReporter';
+
 const FormData = require('form-data');
 const webmToMp4 = require('webm-to-mp4');
 
@@ -22,21 +24,18 @@ export default class ZebAgent {
   private readonly _defaultConcurrentTask = 10;
   private readonly _maximumConcurrentTask = 20;
 
-  constructor(config: {reporter: any[]}) {
-    const zebRunnerConf = config.reporter.filter(
-      (f) => f[0].includes('zeb') || f[1]?.includes('zeb')
-    );
+  constructor(config: zebrunnerConfig) {
     this._accessToken = process.env.ZEB_API_KEY;
-    this._projectKey = zebRunnerConf[0][1].projectKey;
-    this._reportBaseUrl = zebRunnerConf[0][1].reporterBaseUrl;
+    this._projectKey = config.projectKey;
+    this._reportBaseUrl = config.reporterBaseUrl;
 
-    if (zebRunnerConf[0][1].enabled) {
+    if (config.enabled) {
       this._enabled = true;
     } else {
       this._enabled = false;
     }
 
-    this._concurrentTasks = zebRunnerConf[0][1].concurrentTasks || this._defaultConcurrentTask;
+    this._concurrentTasks = config.concurrentTasks || this._defaultConcurrentTask;
 
     if (this._concurrentTasks > this._maximumConcurrentTask) {
       this._concurrentTasks = this._maximumConcurrentTask;
