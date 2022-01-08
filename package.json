@@ -1,6 +1,6 @@
 {
   "name": "zebrunner-playwright-agent",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
