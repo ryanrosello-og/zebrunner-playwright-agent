@@ -5,11 +5,9 @@ import Urls from './Urls';
 import * as path from 'path';
 import * as fs from 'fs';
 import {randomUUID} from 'crypto';
-import {testStep} from './ResultsParser';
+import {browserCapabilities, testStep} from './ResultsParser';
 import {zebrunnerConfig} from './zebReporter';
-
 const FormData = require('form-data');
-const webmToMp4 = require('webm-to-mp4');
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -322,46 +320,56 @@ export default class ZebAgent {
 
   // this sends browser type to ZebRunner
   async startTestSession(options: {
-    browser: string;
+    browserCapabilities: browserCapabilities;
     startedAt: string;
     testRunId: number;
-    testIds: number[];
+    testIds: number[] | number;
   }): Promise<AxiosResponse> {
     let payload = {
       sessionId: randomUUID(),
       initiatedAt: options.startedAt,
       startedAt: options.startedAt,
       desiredCapabilities: {
-        browserName: options.browser,
-        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+        browserName: options.browserCapabilities.browser.name,
+        browserVersion: options.browserCapabilities.browser.version,
+        platformName: options.browserCapabilities.os.name,
       },
       capabilities: {
-        browserName: options.browser,
-        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+        browserName: options.browserCapabilities.browser.name,
+        browserVersion: options.browserCapabilities.browser.version,
+        platformName: options.browserCapabilities.os.name,
       },
-      testIds: options.testIds,
+      testIds: [],
     };
 
-    const endpoint = this._urls.urlStartSession(options.testRunId);
-    let r = await this._api.post({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    payload.testIds.push(options.testIds);
+    try {
+      const endpoint = this._urls.urlStartSession(options.testRunId);
+      let r = await this._api.post({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async finishTestSession(
     sessionId: string,
     testRunId: number,
     endedAt: string,
-    testIds: number[]
+    testIds: number[] | number,
   ): Promise<AxiosResponse> {
     let payload = {
       endedAt: endedAt,
-      testIds: testIds,
+      testIds: [],
     };
+
+    payload.testIds.push(testIds);
+
     const endpoint = this._urls.urlFinishSession(testRunId, sessionId);
     let r = await this._api.put({
       url: endpoint.url,

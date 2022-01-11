@@ -5,6 +5,7 @@ import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
 
+
 export type zebrunnerConfig = {
   projectKey: string;
   reporterBaseUrl: string;
@@ -24,6 +25,7 @@ class ZebRunnerReporter implements Reporter {
   private zebAgent: ZebAgent;
   private slackReporter: SlackReporter;
   private testRunId: number;
+  private test: any;
 
   onBegin(config: FullConfig, suite: Suite) {
     const configKeys = config.reporter.filter((f) => f[0].includes('zeb') || f[1]?.includes('zeb'));
@@ -93,7 +95,6 @@ class ZebRunnerReporter implements Reporter {
         value: 'Regression',
       },
     ]); // broke - labels does not appear in the UI
-
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
     let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
@@ -112,7 +113,7 @@ class ZebRunnerReporter implements Reporter {
 
     let videoArtifacts = await this.addVideoArtifacts(
       this.testRunId,
-      testSessions.sessionsIdArray,
+      testSessions.sessionsWithVideoAttachments,
       testsExecutions.results
     );
     let stopTestRunsResult = await this.stopTestRuns(this.testRunId, new Date().toISOString());
@@ -284,53 +285,57 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async sendTestSessions(testRunId: number, runStartTime: number, tests: testResult[]) {
-    let sessionsIdArray = [];
-    const testSuitesGrouped = this._groupBy(tests, 'suiteName');
+    let sessionsWithVideoAttachments = [];
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
-      .for(Object.entries(testSuitesGrouped))
-      .process(async (suite: [string, testResult[]], index, pool) => {
+      .for(tests)
+      .process(async (test, index, pool) => {
         let sess = await this.zebAgent.startTestSession({
-          browser: 'chrome', // TODO: - need to figure out how to determine the browser type testIds[0].browser,
+          browserCapabilities: test.browserCapabilities,
           startedAt: new Date(runStartTime).toISOString(),
           testRunId: testRunId,
-          testIds: suite[1].map((t) => t.testId),
+          testIds: test.testId,
         });
 
         let res = await this.zebAgent.finishTestSession(
           sess.data.id,
           testRunId,
           new Date(runStartTime + 1).toISOString(),
-          suite[1].map((t) => t.testId)
+          test.testId,
         );
-
-        sessionsIdArray.push(sess.data.id);
+        
+        if (test.attachment.video.length > 0) {
+          sessionsWithVideoAttachments.push({
+            sessionId: sess.data.id,
+            testId: test.testId
+          })
+        }
         return res;
       });
 
-    return {sessionsIdArray, results, errors};
+    return {sessionsWithVideoAttachments, results, errors};
   }
 
-  async addVideoArtifacts(testRunId: number, sessionsIdArray: number[], tests: testResult[]) {
-    const testSuitesGrouped = this._groupBy(tests, 'suiteName');
+  async addVideoArtifacts(testRunId: number, sessionsWithVideoAttachments: Record<string, number>[], tests: testResult[]) {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
-      .for(Object.entries(testSuitesGrouped))
-      .process(async (suite: [string, testResult[]], index, pool) => {
-        const promise = suite[1].map((test) => {
-          return this.zebAgent.sendVideoArtifacts(
+      .for(tests)
+      .process(async (test, index, pool) => {
+        let res;
+        const result = sessionsWithVideoAttachments.filter(el => el.testId === test.testId);
+        if (result.length > 0) {
+          res = await this.zebAgent.sendVideoArtifacts(
             testRunId,
-            sessionsIdArray[index],
+            result[0].sessionId,
             test.attachment.video
           );
-        });
-        const response = await Promise.all(promise);
-
-        return response.map((res) => res);
+        };
+        
+        return res;
       });
-    const result = results.flat();
 
-    return {results: result, errors};
+    return {results, errors};
   }
 
+  // ? mb remove this
   _groupBy(array, key) {
     return array.reduce((result, currentValue) => {
       (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
