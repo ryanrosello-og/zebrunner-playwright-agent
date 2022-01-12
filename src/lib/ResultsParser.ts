@@ -205,7 +205,6 @@ export default class ResultsParser {
     const browserCapabilities = this.parseBrowserCapabilities(launchInfo);
     let testResults: testResult[] = [];
     for (const test of tests) {
-      let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
