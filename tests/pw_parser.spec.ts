@@ -171,5 +171,12 @@ test('parses test details from the results @unit_test', async ({parsedResults}) 
   expect(parsedResults.tests[0].endedAt).toEqual('2021-12-18T09:43:23.630Z');
   expect(parsedResults.tests[0].name).toEqual('nested foo > foo - L2 > basic test @broke');
   expect(parsedResults.tests[0].suiteName).toEqual('nested foo > foo - L2');
-  expect(parsedResults.tests[0].browserCapabilities).toBe(undefined);
+  expect(parsedResults.tests[0].browserCapabilities).toStrictEqual({
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+    browser: { name: 'Safari', version: '15.4', major: '15' },
+    engine: { name: 'WebKit', version: '605.1.15' },
+    os: { name: 'Mac OS', version: '10.15.7' },
+    device: { vendor: undefined, model: undefined, type: undefined },
+    cpu: { architecture: undefined }
+  });
 });

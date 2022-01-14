@@ -114,7 +114,7 @@ export default class ZebAgent {
       name: string;
       className: string;
       methodName: string;
-      startedAt: string;
+      startedAt: Date;
       maintainer?: string;
       testCase?: string;
       labels?: {key: string; value: string}[];
@@ -136,17 +136,21 @@ export default class ZebAgent {
     payload: {
       result: 'PASSED' | 'FAILED' | 'ABORTED' | 'SKIPPED';
       reason?: string;
-      endedAt?: string;
+      endedAt?: Date;
     }
   ): Promise<AxiosResponse> {
-    let endpoint = this._urls.urlFinishTest(testRunId, testId);
-    let r = await this._api.put({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    try {
+      let endpoint = this._urls.urlFinishTest(testRunId, testId);
+      let r = await this._api.put({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async finishTestRun(
@@ -321,7 +325,7 @@ export default class ZebAgent {
   // this sends browser type to ZebRunner
   async startTestSession(options: {
     browserCapabilities: browserCapabilities;
-    startedAt: string;
+    startedAt: Date;
     testRunId: number;
     testIds: number[] | number;
   }): Promise<AxiosResponse> {
@@ -360,7 +364,7 @@ export default class ZebAgent {
   async finishTestSession(
     sessionId: string,
     testRunId: number,
-    endedAt: string,
+    endedAt: Date,
     testIds: number[] | number,
   ): Promise<AxiosResponse> {
     let payload = {

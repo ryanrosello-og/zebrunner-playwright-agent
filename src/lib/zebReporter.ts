@@ -273,6 +273,7 @@ class ZebRunnerReporter implements Reporter {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
+        // console.log('start', test.startedAt);
         let r = await this.zebAgent.finishTestExecution(testRunId, test.testId, {
           result: test.status,
           reason: test.reason,
@@ -291,7 +292,7 @@ class ZebRunnerReporter implements Reporter {
       .process(async (test, index, pool) => {
         let sess = await this.zebAgent.startTestSession({
           browserCapabilities: test.browserCapabilities,
-          startedAt: new Date(runStartTime).toISOString(),
+          startedAt: test.startedAt,
           testRunId: testRunId,
           testIds: test.testId,
         });
@@ -299,7 +300,7 @@ class ZebRunnerReporter implements Reporter {
         let res = await this.zebAgent.finishTestSession(
           sess.data.id,
           testRunId,
-          new Date(runStartTime + 1).toISOString(),
+          test.endedAt,
           test.testId,
         );
         
@@ -333,14 +334,6 @@ class ZebRunnerReporter implements Reporter {
       });
 
     return {results, errors};
-  }
-
-  // ? mb remove this
-  _groupBy(array, key) {
-    return array.reduce((result, currentValue) => {
-      (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
-      return result;
-    }, {});
   }
 }
 export default ZebRunnerReporter;

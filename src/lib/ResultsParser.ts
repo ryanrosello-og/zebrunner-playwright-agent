@@ -16,10 +16,10 @@ export type testResult = {
     screenshots: Record<string, number>[];
   };
   browserCapabilities: browserCapabilities;
-  endedAt: string;
+  endedAt: Date;
   reason: string;
   retry: number;
-  startedAt: string;
+  startedAt: Date;
   status: 'FAILED' | 'PASSED' | 'SKIPPED' | 'ABORTED';
   tags: {
     key: string;
@@ -163,37 +163,6 @@ export default class ResultsParser {
       return;
     }
   }
-  // ? mb remove this
-  // async parseGroupedByTestSuite() {
-  //   for (const project of this._resultsData.suites) {
-  //     for (const testSuite of project.suites) {
-  //       await this.parseByTestSuite(testSuite);
-  //     }
-  //   }
-  // }
-
-  // async parseByTestSuite(suite, suiteIndex = 0) {
-  //   let testResults = [];
-  //   if (suite.suites?.length > 0) {
-  //     testResults = await this.parseTests(suite.title, suite.tests);
-  //     this.updateResults({
-  //       testSuite: {
-  //         title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-  //         tests: testResults,
-  //       },
-  //     });
-  //     await this.parseByTestSuite(suite.suites[suiteIndex], suiteIndex++);
-  //   } else {
-  //     testResults = await this.parseTests(suite.title, suite.tests);
-  //     this.updateResults({
-  //       testSuite: {
-  //         title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-  //         tests: testResults,
-  //       },
-  //     });
-  //     return;
-  //   }
-  // }
 
   updateResults(data) {
     if (data.tests.length > 0) {
@@ -212,8 +181,8 @@ export default class ResultsParser {
           tags: this.getTestTags(test.title),
           status: this.determineStatus(result.status),
           retry: result.retry,
-          startedAt: new Date(result.startTime).toISOString(),
-          endedAt: new Date(new Date(result.startTime).getTime() + result.duration).toISOString(),
+          startedAt: new Date(result.startTime),
+          endedAt: new Date(new Date(result.startTime).getTime() + result.duration),
           // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
           reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
             result.error?.stack
