@@ -4,6 +4,7 @@ import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
+import zebTCM from './zebTCM';
 
 export type zebrunnerConfig = {
   projectKey: string;
@@ -41,15 +42,18 @@ class ZebRunnerReporter implements Reporter {
     this.config = config;
     this.suite = suite;
     this.zebAgent = new ZebAgent(this.zebConfig);
+    // console.log(suite.suites[0].suites[0]._allHooks[0]._testType.test.beforeAll());
+    // console.log(suite.suites[0].suites[0].suites[0]._allHooks);
   }
 
   async onEnd() {
+    // console.log(this.suite.suites[0].suites[0]._allHooks[0]._testType.test.beforeAll());
+    // console.log(this.suite.suites[0].suites[0]._allHooks[0].annotations);
     if (!this.zebAgent.isEnabled) {
       console.log('Zebrunner agent disabled - skipped results upload');
       return;
     }
     await this.zebAgent.initialize();
-
     let resultsParser = new ResultsParser(this.suite, this.zebConfig);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
@@ -87,15 +91,16 @@ class ZebRunnerReporter implements Reporter {
     await this.startTestRuns(runStartTime, testRunName);
     console.log('testRuns >>', this.testRunId);
 
-    let testRunTags = await this.addTestRunTags(this.testRunId, [
-      {
-        key: 'group',
-        value: 'Regression',
-      },
-    ]); // broke - labels does not appear in the UI
-
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
-    let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
+    const tcm = new zebTCM(testsExecutions.results);
+    // create valid labels for run and tests
+    const updateTestsInfoWithTCMConfig = tcm.parse();
+
+    // can add custom tags
+    const runTags = this.createRunTags(updateTestsInfoWithTCMConfig[0]);
+
+    let testRunTags = await this.addTestRunTags(this.testRunId, runTags); // broke - labels does not appear in the UI
+    let testTags = await this.addTestTags(this.testRunId, updateTestsInfoWithTCMConfig);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
     let testArtifacts = await this.addTestArtifacts(this.testRunId, testsExecutions.results);
     let testSteps = await this.sendTestSteps(this.testRunId, testsExecutions.results);
@@ -256,10 +261,12 @@ class ZebRunnerReporter implements Reporter {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
+
         let testExecResponse = await this.zebAgent.startTestExecution(testRunId, {
           name: test.name,
           className: test.suiteName,
           methodName: test.name,
+          maintainer: test.maintainer,
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;
@@ -336,6 +343,15 @@ class ZebRunnerReporter implements Reporter {
       (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
       return result;
     }, {});
+  }
+
+  createRunTags(tcm) {
+    let tags = [];
+    Object.keys(tcm.xrayConfig).forEach((item) => {
+      tags.push(tcm.xrayConfig[item]);
+    })
+    console.log('tags',tags);
+    return tags;
   }
 }
 export default ZebRunnerReporter;

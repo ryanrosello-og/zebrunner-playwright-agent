@@ -9,7 +9,6 @@ import {testStep} from './ResultsParser';
 import {zebrunnerConfig} from './zebReporter';
 
 const FormData = require('form-data');
-const webmToMp4 = require('webm-to-mp4');
 
 export default class ZebAgent {
   private _refreshToken: string;
@@ -290,15 +289,18 @@ export default class ZebAgent {
     let payload = {
       items,
     };
-
-    const endpoint = this._urls.urlTestExecutionLabel(testRunId, testId);
-    let r = await this._api.put({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    try {
+      const endpoint = this._urls.urlTestExecutionLabel(testRunId, testId);
+      let r = await this._api.put({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {

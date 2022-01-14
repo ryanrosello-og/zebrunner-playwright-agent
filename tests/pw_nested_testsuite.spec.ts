@@ -1,10 +1,18 @@
 import {test, expect, Page} from '@playwright/test';
 const {firefox} = require('playwright');
+
+test.beforeEach(async ({}, testInfo) => {
+  // testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'});
+})
+
 test.describe('nested foo', () => {
-  test('test runnin in Firery fox @ff @smoke_test @slow', async () => {
+  test('test runnin in Firery fox @ff @smoke_test @slow', async ({page}, testInfo) => {
+    testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
+    // testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey'});
+    testInfo.duration = 1000;
     const browser = await firefox.launch();
-    const page = await browser.newPage();
-    await page.goto('https://example.com');
+    const page1 = await browser.newPage();
+    await page1.goto('https://example.com');
     await browser.close();
   });
 
@@ -19,7 +27,8 @@ test.describe('nested foo', () => {
       await expect(page).toHaveURL('https://playwright.dev/');
     });
 
-    test('basic test @broke', async ({page}) => {
+    test('basic test @broke', async ({page}, testInfo) => {
+      testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
       const title = page.locator('.navbar__inner .navbar__title');
       await expect(title).toHaveText('Playwright_broke');
     });

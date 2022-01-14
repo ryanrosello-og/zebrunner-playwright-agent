@@ -21,7 +21,16 @@ export type testResult = {
     value: string;
   }[];
   steps?: testStep[];
+  maintainer: string;
+  xrayConfig: xrayConfig
 };
+
+export type xrayConfig = {
+  executionKey?: string;
+  testKey?: string;
+  syncEnabled?: boolean;
+  enableRealTimeSync?: boolean;
+}
 
 export type testStep = {
   level: 'INFO' | 'ERROR';
@@ -173,6 +182,8 @@ export default class ResultsParser {
     let testResults: testResult[] = [];
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
+      console.log(test.annotations)
+      const {maintainer, xray} = this.annotationsParser(test.annotations);
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
@@ -189,10 +200,31 @@ export default class ResultsParser {
           attachment: this.processAttachment(result.attachments),
           browser: browser,
           steps: this.getTestSteps(result.steps),
+          maintainer: maintainer.length > 0 ? maintainer[0].description : '',
+          xrayConfig: {
+            executionKey: xray.executionKey ? xray.executionKey : '',
+            testKey: xray.testKey ? xray.testKey : '',
+            syncEnabled: xray.syncEnabled ? xray.syncEnabled : true,
+            enableRealTimeSync: xray.enableRealTimeSync ? xray.enableRealTimeSync : false,
+          },
         });
       }
     }
     return testResults;
+  }
+
+  annotationsParser(annotations: {type: string, description: string}[]) {
+    const maintainer = annotations.filter(el => el.type === 'maintainer');
+    const xray = annotations.reduce<xrayConfig>((acc, el) => {
+      if (el.type === 'xrayExecutionKey') {
+        acc = {...acc,  executionKey: el.description};
+      }
+      if (el.type === 'xrayTestKey') {
+        acc = {...acc, testKey: el.description};
+      }
+      return acc;
+    }, {})
+    return {maintainer, xray};
   }
 
   cleanseReason(rawReason) {
