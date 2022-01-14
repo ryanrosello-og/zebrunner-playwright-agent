@@ -304,7 +304,7 @@ export default class ZebAgent {
   }
 
   async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {
-    if (!items) return;
+    if (items.length === 0) return;
 
     let payload = {
       items,

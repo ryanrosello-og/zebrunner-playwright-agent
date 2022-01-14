@@ -1,14 +1,14 @@
 import {test, expect, Page} from '@playwright/test';
 const {firefox} = require('playwright');
 
-test.beforeEach(async ({}, testInfo) => {
-  // testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'});
-})
-
 test.describe('nested foo', () => {
+  test.beforeEach(async ({}, testInfo) => {
+    testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'});
+  })
+
   test('test runnin in Firery fox @ff @smoke_test @slow', async ({page}, testInfo) => {
     testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
-    // testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey'});
+    testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey'});
     testInfo.duration = 1000;
     const browser = await firefox.launch();
     const page1 = await browser.newPage();

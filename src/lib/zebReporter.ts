@@ -1,10 +1,11 @@
+import { xrayConfig } from './ResultsParser';
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
-import zebTCM from './zebTCM';
+import { xrayLabels } from './constants';
 
 export type zebrunnerConfig = {
   projectKey: string;
@@ -42,13 +43,9 @@ class ZebRunnerReporter implements Reporter {
     this.config = config;
     this.suite = suite;
     this.zebAgent = new ZebAgent(this.zebConfig);
-    // console.log(suite.suites[0].suites[0]._allHooks[0]._testType.test.beforeAll());
-    // console.log(suite.suites[0].suites[0].suites[0]._allHooks);
   }
 
   async onEnd() {
-    // console.log(this.suite.suites[0].suites[0]._allHooks[0]._testType.test.beforeAll());
-    // console.log(this.suite.suites[0].suites[0]._allHooks[0].annotations);
     if (!this.zebAgent.isEnabled) {
       console.log('Zebrunner agent disabled - skipped results upload');
       return;
@@ -90,17 +87,12 @@ class ZebRunnerReporter implements Reporter {
     let testRunName = testResults.testRunName;
     await this.startTestRuns(runStartTime, testRunName);
     console.log('testRuns >>', this.testRunId);
-
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
-    const tcm = new zebTCM(testsExecutions.results);
-    // create valid labels for run and tests
-    const updateTestsInfoWithTCMConfig = tcm.parse();
-
-    // can add custom tags
-    const runTags = this.createRunTags(updateTestsInfoWithTCMConfig[0]);
+    
+    const runTags = this.createRunTags(testsExecutions.results[0]);
 
     let testRunTags = await this.addTestRunTags(this.testRunId, runTags); // broke - labels does not appear in the UI
-    let testTags = await this.addTestTags(this.testRunId, updateTestsInfoWithTCMConfig);
+    let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
     let testArtifacts = await this.addTestArtifacts(this.testRunId, testsExecutions.results);
     let testSteps = await this.sendTestSteps(this.testRunId, testsExecutions.results);
@@ -129,8 +121,9 @@ class ZebRunnerReporter implements Reporter {
         results: testsExecutions.results,
       },
       testRunTags: {
-        success: testRunTags.status === 204 ? 1 : 0,
-        errors: testRunTags.status !== 204 ? 1 : 0,
+        success: testRunTags && testRunTags.status === 204 ? 1 : 0,
+        errors: testRunTags && testRunTags.status !== 204 ? 1 : 0,
+        isEmpty: !testRunTags ? true : false,
       },
       testTags: {
         success: testTags.results.filter((f) => f && f.status === 204).length,
@@ -198,8 +191,12 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async addTestRunTags(testRunId: number, tags: any[]) {
-    let r = await this.zebAgent.addTestRunTags(testRunId, tags);
-    return r;
+    try {
+      let r = await this.zebAgent.addTestRunTags(testRunId, tags);
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async addTestTags(testRunId: number, tests) {
@@ -345,12 +342,18 @@ class ZebRunnerReporter implements Reporter {
     }, {});
   }
 
-  createRunTags(tcm) {
+  createRunTags(run) {
     let tags = [];
-    Object.keys(tcm.xrayConfig).forEach((item) => {
-      tags.push(tcm.xrayConfig[item]);
+    if (Object.keys(run.xrayConfig).length === 0) {
+      return tags;
+    }
+
+    Object.keys(run.xrayConfig).forEach((item) => {
+      if (run.xrayConfig[item].key !== xrayLabels.TEST_KEY) {
+        tags.push(run.xrayConfig[item]);
+      }
     })
-    console.log('tags',tags);
+
     return tags;
   }
 }

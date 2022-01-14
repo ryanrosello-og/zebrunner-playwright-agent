@@ -1,3 +1,4 @@
+import { xrayLabels } from './constants';
 import {zebrunnerConfig} from './zebReporter';
 
 export type testResult = {
@@ -22,15 +23,34 @@ export type testResult = {
   }[];
   steps?: testStep[];
   maintainer: string;
-  xrayConfig: xrayConfig
+  xrayConfig: updateXrayConfig
 };
 
-export type xrayConfig = {
+export type updateXrayConfig = {
+  testKey: {
+    key: string;
+    value: string;
+  };
+  executionKey: {
+    key: string;
+    value: string;
+  };
+  enableSync?: {
+    key: string;
+    value: boolean;
+  };
+  enableRealTimeSync?: {
+    key: string;
+    value: boolean;
+  };
+} & {};
+
+type testXrayConfig = {
   executionKey?: string;
   testKey?: string;
-  syncEnabled?: boolean;
+  disableSync?: boolean;
   enableRealTimeSync?: boolean;
-}
+} & {};
 
 export type testStep = {
   level: 'INFO' | 'ERROR';
@@ -91,7 +111,6 @@ export default class ResultsParser {
       environment: this._environment,
     };
     this._resultsData = results;
-    // console.log(this._resultsData);
   }
 
   public get build() {
@@ -182,13 +201,12 @@ export default class ResultsParser {
     let testResults: testResult[] = [];
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
-      console.log(test.annotations)
-      const {maintainer, xray} = this.annotationsParser(test.annotations);
+      const {maintainer, xrayConfig} = this.annotationsParser(test.annotations);
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
           name: `${suiteName} > ${test.title}`,
-          tags: this.getTestTags(test.title),
+          tags: this.getTestTags(test.title, xrayConfig),
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime).toISOString(),
@@ -201,30 +219,58 @@ export default class ResultsParser {
           browser: browser,
           steps: this.getTestSteps(result.steps),
           maintainer: maintainer.length > 0 ? maintainer[0].description : '',
-          xrayConfig: {
-            executionKey: xray.executionKey ? xray.executionKey : '',
-            testKey: xray.testKey ? xray.testKey : '',
-            syncEnabled: xray.syncEnabled ? xray.syncEnabled : true,
-            enableRealTimeSync: xray.enableRealTimeSync ? xray.enableRealTimeSync : false,
-          },
+          xrayConfig,
         });
       }
     }
     return testResults;
   }
 
-  annotationsParser(annotations: {type: string, description: string}[]) {
+  annotationsParser(annotations: {type: string, description: string & boolean}[]) {
     const maintainer = annotations.filter(el => el.type === 'maintainer');
-    const xray = annotations.reduce<xrayConfig>((acc, el) => {
+    const xrayParse = annotations.reduce<testXrayConfig>((acc, el) => {
       if (el.type === 'xrayExecutionKey') {
         acc = {...acc,  executionKey: el.description};
       }
       if (el.type === 'xrayTestKey') {
         acc = {...acc, testKey: el.description};
       }
+      if (el.type === 'xrayDisableSync') {
+        acc = {...acc, disableSync: el.description};
+      }
+      if (el.type === 'xrayEnableRealTimeSync') {
+        acc = {...acc, enableRealTimeSync: el.description};
+      }
       return acc;
     }, {})
-    return {maintainer, xray};
+    const xrayConfig = this.updateXrayConfig(xrayParse);
+
+    return {maintainer, xrayConfig};
+  }
+
+  updateXrayConfig(xrayConfig: testXrayConfig): updateXrayConfig {
+    if (Object.keys(xrayConfig).length === 0 || !xrayConfig.executionKey) {
+      // !fix type
+      return {};
+    }
+    return {
+      testKey: {
+        key: xrayLabels.TEST_KEY,
+        value: xrayConfig.testKey ? xrayConfig.testKey : '',
+      },
+      executionKey: {
+        key: xrayLabels.EXECUTION_KEY,
+        value: xrayConfig.executionKey ? xrayConfig.executionKey : '',
+      },
+      enableSync: {
+        key: xrayLabels.SYNC_ENABLED,
+        value: xrayConfig.disableSync ? false : true,
+      },
+      enableRealTimeSync: {
+        key: xrayLabels.SYNC_REAL_TIME,
+        value: xrayConfig.enableRealTimeSync ? xrayConfig.enableRealTimeSync : false,
+      },
+    }
   }
 
   cleanseReason(rawReason) {
@@ -240,11 +286,24 @@ export default class ResultsParser {
       : '';
   }
 
-  getTestTags(testTitle) {
-    let tags = testTitle.match(/@\w*/g);
+  getTestTags(testTitle, xrayConfig) {
+    let tags = testTitle.match(/@\w*/g) || [];
 
-    if (tags) {
-      return tags.map((c) => ({key: 'tag', value: c.replace('@', '')}));
+    if (Object.keys(xrayConfig).length !== 0) {
+      if (xrayConfig.testKey.value) {
+        tags.push(xrayConfig.testKey)
+      }
+    }
+
+    if (tags.length !== 0) {
+      return tags.map((c) => {
+        if (typeof c === 'string') {
+          return {key: 'tag', value: c.replace('@', '')}
+        }
+        if (typeof c === 'object') {
+          return c;
+        }
+      });
     }
     return null;
   }
