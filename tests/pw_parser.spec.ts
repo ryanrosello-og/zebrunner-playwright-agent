@@ -167,8 +167,8 @@ test('parses path to the screenshot from the results @unit_test', async ({parsed
 
 test('parses test details from the results @unit_test', async ({parsedResults}) => {
   expect(parsedResults.tests.length).toEqual(1);
-  expect(parsedResults.tests[0].startedAt).toEqual('2021-12-18T09:43:16.000Z');
-  expect(parsedResults.tests[0].endedAt).toEqual('2021-12-18T09:43:23.630Z');
+  expect(parsedResults.tests[0].startedAt).toEqual(new Date('2021-12-18T09:43:16.000Z'));
+  expect(parsedResults.tests[0].endedAt).toEqual(new Date('2021-12-18T09:43:23.630Z'));
   expect(parsedResults.tests[0].name).toEqual('nested foo > foo - L2 > basic test @broke');
   expect(parsedResults.tests[0].suiteName).toEqual('nested foo > foo - L2');
   expect(parsedResults.tests[0].browserCapabilities).toStrictEqual({
