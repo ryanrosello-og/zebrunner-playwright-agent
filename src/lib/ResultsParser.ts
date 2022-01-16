@@ -23,34 +23,28 @@ export type testResult = {
   }[];
   steps?: testStep[];
   maintainer: string;
-  xrayConfig: updateXrayConfig
+  xrayConfig: xrayConfig
 };
 
-export type updateXrayConfig = {
-  testKey: {
+export type xrayConfig = {
+  xrayTestKey: {
+    key: string;
+    value: string[];
+  };
+  xrayExecutionKey: {
     key: string;
     value: string;
   };
-  executionKey: {
-    key: string;
-    value: string;
-  };
-  enableSync?: {
+  xrayEnableSync?: {
     key: string;
     value: boolean;
   };
-  enableRealTimeSync?: {
+  xrayEnableRealTimeSync?: {
     key: string;
     value: boolean;
   };
 } & {};
 
-type testXrayConfig = {
-  executionKey?: string;
-  testKey?: string;
-  disableSync?: boolean;
-  enableRealTimeSync?: boolean;
-} & {};
 
 export type testStep = {
   level: 'INFO' | 'ERROR';
@@ -226,51 +220,56 @@ export default class ResultsParser {
     return testResults;
   }
 
-  annotationsParser(annotations: {type: string, description: string & boolean}[]) {
+  annotationsParser(annotations: {type: string, description: string}[]) {
     const maintainer = annotations.filter(el => el.type === 'maintainer');
-    const xrayParse = annotations.reduce<testXrayConfig>((acc, el) => {
-      if (el.type === 'xrayExecutionKey') {
-        acc = {...acc,  executionKey: el.description};
-      }
-      if (el.type === 'xrayTestKey') {
-        acc = {...acc, testKey: el.description};
-      }
-      if (el.type === 'xrayDisableSync') {
-        acc = {...acc, disableSync: el.description};
-      }
-      if (el.type === 'xrayEnableRealTimeSync') {
-        acc = {...acc, enableRealTimeSync: el.description};
-      }
-      return acc;
-    }, {})
-    const xrayConfig = this.updateXrayConfig(xrayParse);
-
+    const xrayConfig = this.parseXrayConfig(annotations);
     return {maintainer, xrayConfig};
   }
 
-  updateXrayConfig(xrayConfig: testXrayConfig): updateXrayConfig {
-    if (Object.keys(xrayConfig).length === 0 || !xrayConfig.executionKey) {
-      // !fix type
+  parseXrayConfig(annotations: {type: string, description: string}[]): xrayConfig {
+    const readyXrayConfig = {
+      xrayExecutionKey: {
+        key: xrayLabels.EXECUTION_KEY,
+        value: '',
+      },
+      xrayTestKey: {
+        key: xrayLabels.TEST_KEY,
+        value: [],
+      },
+      xrayDisableSync: {
+        key: xrayLabels.SYNC_ENABLED,
+        value: true,
+      },
+      xrayEnableRealTimeSync: {
+        key: xrayLabels.SYNC_REAL_TIME,
+        value: false,
+      }
+    }
+
+    annotations.forEach((xray) => {
+      if (xray.type === 'xrayExecutionKey') {
+        readyXrayConfig.xrayExecutionKey.value = xray.description;
+      }
+      if (xray.type === 'xrayTestKey') {
+        readyXrayConfig.xrayTestKey.value.push(xray.description);
+      }
+      if (xray.type === 'xrayDisableSync') {
+        readyXrayConfig.xrayDisableSync.value = JSON.parse(xray.description);
+      } 
+      if (xray.type === 'xrayEnableRealTimeSync') {
+        readyXrayConfig.xrayEnableRealTimeSync.value = JSON.parse(xray.description);
+      }
+    });
+    
+    if (!this.isValidXray(readyXrayConfig)) {
       return {};
     }
-    return {
-      testKey: {
-        key: xrayLabels.TEST_KEY,
-        value: xrayConfig.testKey ? xrayConfig.testKey : '',
-      },
-      executionKey: {
-        key: xrayLabels.EXECUTION_KEY,
-        value: xrayConfig.executionKey ? xrayConfig.executionKey : '',
-      },
-      enableSync: {
-        key: xrayLabels.SYNC_ENABLED,
-        value: xrayConfig.disableSync ? false : true,
-      },
-      enableRealTimeSync: {
-        key: xrayLabels.SYNC_REAL_TIME,
-        value: xrayConfig.enableRealTimeSync ? xrayConfig.enableRealTimeSync : false,
-      },
-    }
+
+    return readyXrayConfig;
+  }
+
+  isValidXray(xrayConfig) {
+    return xrayConfig.xrayExecutionKey.value ? true : false;
   }
 
   cleanseReason(rawReason) {
@@ -290,9 +289,19 @@ export default class ResultsParser {
     let tags = testTitle.match(/@\w*/g) || [];
 
     if (Object.keys(xrayConfig).length !== 0) {
-      if (xrayConfig.testKey.value) {
-        tags.push(xrayConfig.testKey)
-      }
+      xrayConfig.xrayTestKey.value.forEach((el) => {
+        if (el) {
+          tags.push({
+            key: xrayConfig.xrayTestKey.key,
+            value: el,
+          });
+        }
+      })
+      Object.keys(xrayConfig).forEach((key) => {
+        if (xrayConfig[key] === 'testKey') {
+          tags.push(xrayConfig[key])
+        }
+      })
     }
 
     if (tags.length !== 0) {
