@@ -12,22 +12,22 @@ const config: PlaywrightTestConfig = {
   projects: [
     // {
     //   name: 'chromium',
-    //   use: {...devices['Desktop Chrome']},
+    //   use: { ...devices['Desktop Chrome'] },
     // },
     // {
     //   name: 'firefox',
-    //   use: {...devices['Desktop Firefox']},
+    //   use: { ...devices['Desktop Firefox'] },
     // },
     {
       name: 'webkit',
-      use: {...devices['Desktop Safari']},
+      use: { ...devices['Desktop Safari'] },
     },
   ],
   reporter: [
     [
       './src/lib/zebReporter.ts',
       {
-        reporterBaseUrl: 'https://webdriver.zebrunner.com',
+        reporterBaseUrl: 'https://default.zebrunner.com',
         projectKey: 'DEF',
         enabled: true,
         concurrentTasks: 19,

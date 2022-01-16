@@ -6,6 +6,34 @@ const portNumber = 8181;
 const projectKey = 'TEST';
 const baseUrl = 'http://localhost';
 
+const projectObj = {
+  define: [],
+  expect: undefined,
+  outputDir: '/Users/it/repo/pw-zeb/test-results',
+  repeatEach: 1,
+  retries: 0,
+  metadata: undefined,
+  name: 'webkit',
+  testDir: '/Users/it/repo/pw-zeb',
+  snapshotDir: '/Users/it/repo/pw-zeb',
+  testIgnore: [],
+  testMatch: '**/?(*.)@(spec|test).@(ts|js|mjs)',
+  timeout: 0,
+  use: {
+    video: 'on',
+    trace: 'on',
+    screenshot: 'only-on-failure',
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
+    screen: { width: 1792, height: 1120 },
+    viewport: { width: 1280, height: 720 },
+    deviceScaleFactor: 2,
+    isMobile: false,
+    hasTouch: false,
+    defaultBrowserType: 'webkit',
+    headless: false
+  }
+};
+
 // TODO: move to constants
 const testData = {
   title: '',
@@ -18,10 +46,12 @@ const testData = {
         {
           title: 'tests/pw_nested_testsuite.spec.js',
           tests: [],
+          project: () => projectObj,
           suites: [
             {
               title: 'nested foo',
               tests: [],
+              project: () => projectObj,
               suites: [
                 {
                   title: 'foo - L2',
@@ -29,6 +59,7 @@ const testData = {
                   parent: {
                     title: 'nested foo',
                   },
+                  project: () => projectObj,
                   tests: [
                     {
                       title: 'basic test @broke',

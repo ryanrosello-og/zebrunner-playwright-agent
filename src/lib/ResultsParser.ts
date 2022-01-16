@@ -1,4 +1,9 @@
 import {zebrunnerConfig} from './zebReporter';
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const ffmpeg = require('fluent-ffmpeg');
+ffmpeg.setFfmpegPath(ffmpegPath);
+let UAParser = require('ua-parser-js');
+let parser = new UAParser();
 
 export type testResult = {
   suiteName: string;
@@ -10,11 +15,11 @@ export type testResult = {
     files: Record<string, string>[];
     screenshots: Record<string, number>[];
   };
-  browser: string;
-  endedAt: string;
+  browserCapabilities: browserCapabilities;
+  endedAt: Date;
   reason: string;
   retry: number;
-  startedAt: string;
+  startedAt: Date;
   status: 'FAILED' | 'PASSED' | 'SKIPPED' | 'ABORTED';
   tags: {
     key: string;
@@ -29,6 +34,31 @@ export type testStep = {
   message: string;
   testId?: number;
 };
+
+export type browserCapabilities = {
+    ua: string;
+    browser: {
+      name: string;
+      version: string;
+      major: string;
+    };
+    engine: { 
+      name: string;
+      version: string; 
+    };
+    os: { 
+      name: string;
+      version: string;
+    };
+    device: { 
+      vendor: string | undefined;
+      model: string | undefined;
+      type: string | undefined;
+      };
+    cpu: { 
+      architecture: string;
+    };
+}
 
 export type testSuite = {
   testSuite: {
@@ -82,7 +112,6 @@ export default class ResultsParser {
       environment: this._environment,
     };
     this._resultsData = results;
-    // console.log(this._resultsData);
   }
 
   public get build() {
@@ -110,11 +139,13 @@ export default class ResultsParser {
   }
 
   async parseTestSuite(suite, suiteIndex = 0) {
+    const launchInfo = suite.project();
     let testResults = [];
     if (suite.suites?.length > 0) {
       testResults = await this.parseTests(
         suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-        suite.tests
+        suite.tests,
+        launchInfo,
       );
       this.updateResults({
         tests: testResults,
@@ -123,41 +154,11 @@ export default class ResultsParser {
     } else {
       testResults = await this.parseTests(
         suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-        suite.tests
+        suite.tests,
+        launchInfo
       );
       this.updateResults({
         tests: testResults,
-      });
-      return;
-    }
-  }
-
-  async parseGroupedByTestSuite() {
-    for (const project of this._resultsData.suites) {
-      for (const testSuite of project.suites) {
-        await this.parseByTestSuite(testSuite);
-      }
-    }
-  }
-
-  async parseByTestSuite(suite, suiteIndex = 0) {
-    let testResults = [];
-    if (suite.suites?.length > 0) {
-      testResults = await this.parseTests(suite.title, suite.tests);
-      this.updateResults({
-        testSuite: {
-          title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-          tests: testResults,
-        },
-      });
-      await this.parseByTestSuite(suite.suites[suiteIndex], suiteIndex++);
-    } else {
-      testResults = await this.parseTests(suite.title, suite.tests);
-      this.updateResults({
-        testSuite: {
-          title: suite.parent.title ? `${suite.parent.title} > ${suite.title}` : suite.title,
-          tests: testResults,
-        },
       });
       return;
     }
@@ -169,10 +170,10 @@ export default class ResultsParser {
     }
   }
 
-  async parseTests(suiteName, tests) {
+  async parseTests(suiteName, tests, launchInfo) {
+    const browserCapabilities = this.parseBrowserCapabilities(launchInfo);
     let testResults: testResult[] = [];
     for (const test of tests) {
-      let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
@@ -180,19 +181,24 @@ export default class ResultsParser {
           tags: this.getTestTags(test.title),
           status: this.determineStatus(result.status),
           retry: result.retry,
-          startedAt: new Date(result.startTime).toISOString(),
-          endedAt: new Date(new Date(result.startTime).getTime() + result.duration).toISOString(),
+          startedAt: new Date(result.startTime),
+          endedAt: new Date(new Date(result.startTime).getTime() + result.duration),
           // testCase: `${result.location.file?}${result.location.line?}:${result.location.column?}`,
           reason: `${this.cleanseReason(result.error?.message)} \n ${this.cleanseReason(
             result.error?.stack
           )}`,
           attachment: this.processAttachment(result.attachments),
-          browser: browser,
           steps: this.getTestSteps(result.steps),
+          browserCapabilities 
         });
       }
     }
     return testResults;
+  }
+
+  parseBrowserCapabilities (launchInfo) {
+    parser.setUA(launchInfo.use.userAgent);
+    return parser.getResult();
   }
 
   cleanseReason(rawReason) {
@@ -224,10 +230,11 @@ export default class ResultsParser {
         files: [],
         screenshots: [],
       };
-      attachment.forEach((el) => {
+      attachment.forEach(async (el) => {
         if (el.contentType === 'video/webm') {
+          await this.convertVideo(el.path, 'mp4');
           attachmentObj.video.push({
-            path: el.path,
+            path: el.path.replace('.webm', '.mp4'),
             timestamp: Date.now(),
           });
         }
@@ -248,6 +255,30 @@ export default class ResultsParser {
     }
     return null;
   }
+
+  async convertVideo (path, format) {
+    try {
+      const fileName = path.replace('.webm', '');
+      const convertedFilePath = `${fileName}.${format}`;
+        await ffmpeg(path)
+          .toFormat(format)
+          .outputOptions([
+            '-vsync 2'
+          ])
+          .on("start", commandLine => {
+            console.log(`Spawned Ffmpeg with command: ${commandLine}`);
+          })
+          .on("error", (err, stdout, stderr) => {
+            console.log(err, stdout, stderr);
+          })
+          .on("end", (stdout, stderr) => {
+            console.log(stdout, stderr);
+          })
+          .saveToFile(convertedFilePath);
+    } catch (error) {
+      console.log(error)
+    }
+  };
 
   determineStatus(status) {
     if (status === 'failed') return 'FAILED';
