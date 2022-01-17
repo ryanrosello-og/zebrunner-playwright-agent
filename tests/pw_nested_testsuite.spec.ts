@@ -1,19 +1,31 @@
 import {test, expect, Page} from '@playwright/test';
 const {firefox} = require('playwright');
 
-// test.beforeAll(async ({}, testInfo) => {
-//   testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'});
-// })
-
 test.describe('nested foo', () => {
   test.beforeEach(async ({}, testInfo) => {
+    // ? Xray
     // testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'});
+
+    // ? TestRail
+    // testInfo.annotations.push({type: 'testRailSuiteId', description: 'testRailSuite'});
+    // testInfo.annotations.push({type: 'testRailRunId', description: '322'});
+    // testInfo.annotations.push({type: 'testRailRunName', description: 'testRailName'});
+    // testInfo.annotations.push({type: 'testRailMilestone', description: 'milestone'});
+    // testInfo.annotations.push({type: 'testRailAssignee', description: 'emarf'});
+    // testInfo.annotations.push({type: 'testRailDisableSync', description: 'true'});
+    // testInfo.annotations.push({type: 'testRailIncludeAll', description: 'true'});
+    // testInfo.annotations.push({type: 'testRailEnableRealTimeSync', description: 'true'});
+
   })
 
   test('test runnin in Firery fox @ff @smoke_test @slow', async ({page}, testInfo) => {
     testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
+    // ? Xray
     testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey'});
     testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey1'});
+    // ? TestRail
+    testInfo.annotations.push({type: 'testRailCaseId', description: 'caseId'});
+    testInfo.annotations.push({type: 'testRailCaseId', description: 'caseId1'});
     const browser = await firefox.launch();
     const page1 = await browser.newPage();
     await page1.goto('https://example.com');

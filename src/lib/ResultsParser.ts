@@ -1,4 +1,4 @@
-import { xrayLabels } from './constants';
+import { testRailLabels, xrayLabels } from './constants';
 import {zebrunnerConfig} from './zebReporter';
 
 export type testResult = {
@@ -23,7 +23,8 @@ export type testResult = {
   }[];
   steps?: testStep[];
   maintainer: string;
-  xrayConfig: xrayConfig
+  xrayConfig: xrayConfig;
+  testRailConfig: testRailConfig;
 };
 
 export type xrayConfig = {
@@ -45,6 +46,44 @@ export type xrayConfig = {
   };
 } & {};
 
+export type testRailConfig = {
+  suiteId: {
+    key: string;
+    value: string;
+  };
+  caseId: {
+    key: string;
+    value: string[];
+  };
+  runId: {
+    key: string;
+    value: string;
+  };
+  runName: {
+    key: string;
+    value: string;
+  };
+  milestone: {
+    key: string;
+    value: string;
+  };
+  assignee: {
+    key: string;
+    value: string;
+  };
+  enableSync: {
+    key: string;
+    value: boolean;
+  };
+  includeAllTestCasesInNewRun: {
+    key: string;
+    value: boolean;
+  };
+  enableRealTimeSync: {
+    key: string;
+    value: boolean;
+  };
+} & {};
 
 export type testStep = {
   level: 'INFO' | 'ERROR';
@@ -195,12 +234,12 @@ export default class ResultsParser {
     let testResults: testResult[] = [];
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
-      const {maintainer, xrayConfig} = this.annotationsParser(test.annotations);
+      const {maintainer, xrayConfig, testRailConfig} = this.annotationsParser(test.annotations);
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
           name: `${suiteName} > ${test.title}`,
-          tags: this.getTestTags(test.title, xrayConfig),
+          tags: this.getTestTags(test.title, xrayConfig, testRailConfig),
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime).toISOString(),
@@ -214,6 +253,7 @@ export default class ResultsParser {
           steps: this.getTestSteps(result.steps),
           maintainer: maintainer.length > 0 ? maintainer[0].description : '',
           xrayConfig,
+          testRailConfig,
         });
       }
     }
@@ -223,7 +263,86 @@ export default class ResultsParser {
   annotationsParser(annotations: {type: string, description: string}[]) {
     const maintainer = annotations.filter(el => el.type === 'maintainer');
     const xrayConfig = this.parseXrayConfig(annotations);
-    return {maintainer, xrayConfig};
+    const testRailConfig = this.parseTestRailConfig(annotations);
+    return {maintainer, xrayConfig, testRailConfig};
+  }
+
+  parseTestRailConfig(annotations: {type: string, description: string}[]): testRailConfig {
+    const readyTestRailConfig = {
+      suiteId: {
+        key: testRailLabels.SUITE_ID,
+        value: '',
+      },
+      caseId: {
+        key: testRailLabels.CASE_ID,
+        value: [],
+      },
+      runId: {
+        key: testRailLabels.RUN_ID,
+        value: '',
+      },
+      runName: {
+        key: testRailLabels.RUN_NAME,
+        value: '',
+      },
+      milestone: {
+        key: testRailLabels.MILESTONE,
+        value: '',
+      },
+      assignee: {
+        key: testRailLabels.ASSIGNEE,
+        value: '',
+      },
+      enableSync: {
+        key: testRailLabels.SYNC_ENABLED,
+        value: true,
+      },
+      includeAllTestCasesInNewRun: {
+        key: testRailLabels.INCLUDE_ALL,
+        value: false,
+      },
+      enableRealTimeSync: {
+        key: testRailLabels.SYNC_REAL_TIME,
+        value: false,
+      },
+    }
+
+    annotations.forEach((testrail) => {
+      if (testrail.type === 'testRailSuiteId') {
+        readyTestRailConfig.suiteId.value = testrail.description;
+      }
+      if (testrail.type === 'testRailCaseId') {
+        readyTestRailConfig.caseId.value.push(testrail.description);
+      }
+      if (testrail.type === 'testRailRunId') {
+        readyTestRailConfig.runId.value = testrail.description;
+      }
+      if(testrail.type === 'testRailRunName') {
+        readyTestRailConfig.runName.value = testrail.description;
+      }
+      if(testrail.type === 'testRailMilestone') {
+        readyTestRailConfig.milestone.value = testrail.description;
+      }
+      if(testrail.type === 'testRailAssignee') {
+        readyTestRailConfig.assignee.value = testrail.description;
+      }
+      if(testrail.type === 'testRailDisableSync') {
+        readyTestRailConfig.enableSync.value = !JSON.parse(testrail.description);
+      }
+      if (testrail.type === 'testRailIncludeAll') {
+        readyTestRailConfig.includeAllTestCasesInNewRun.value = JSON.parse(testrail.description);
+      }
+      if (testrail.type === 'testRailEnableRealTimeSync') {
+        readyTestRailConfig.enableRealTimeSync.value = JSON.parse(testrail.description);
+        readyTestRailConfig.includeAllTestCasesInNewRun.value = JSON.parse(testrail.description);
+      }
+    })
+
+    if (!this.isValidConfig(readyTestRailConfig, 'suiteId')) {
+      return {};
+    }
+
+    return readyTestRailConfig;
   }
 
   parseXrayConfig(annotations: {type: string, description: string}[]): xrayConfig {
@@ -254,22 +373,22 @@ export default class ResultsParser {
         readyXrayConfig.xrayTestKey.value.push(xray.description);
       }
       if (xray.type === 'xrayDisableSync') {
-        readyXrayConfig.xrayDisableSync.value = JSON.parse(xray.description);
+        readyXrayConfig.xrayDisableSync.value = !JSON.parse(xray.description);
       } 
       if (xray.type === 'xrayEnableRealTimeSync') {
         readyXrayConfig.xrayEnableRealTimeSync.value = JSON.parse(xray.description);
       }
     });
     
-    if (!this.isValidXray(readyXrayConfig)) {
+    if (!this.isValidConfig(readyXrayConfig, 'xrayExecutionKey')) {
       return {};
     }
 
     return readyXrayConfig;
   }
 
-  isValidXray(xrayConfig) {
-    return xrayConfig.xrayExecutionKey.value ? true : false;
+  isValidConfig(config, option) {
+    return config[option].value ? true : false;
   }
 
   cleanseReason(rawReason) {
@@ -285,9 +404,8 @@ export default class ResultsParser {
       : '';
   }
 
-  getTestTags(testTitle, xrayConfig) {
+  getTestTags(testTitle, xrayConfig, testRailConfig) {
     let tags = testTitle.match(/@\w*/g) || [];
-
     if (Object.keys(xrayConfig).length !== 0) {
       xrayConfig.xrayTestKey.value.forEach((el) => {
         if (el) {
@@ -297,9 +415,15 @@ export default class ResultsParser {
           });
         }
       })
-      Object.keys(xrayConfig).forEach((key) => {
-        if (xrayConfig[key] === 'testKey') {
-          tags.push(xrayConfig[key])
+    }
+
+    if (Object.keys(testRailConfig).length !== 0) {
+      testRailConfig.caseId.value.forEach((el) => {
+        if (el) {
+          tags.push({
+            key: testRailConfig.caseId.key,
+            value: el,
+          });
         }
       })
     }

@@ -1,11 +1,10 @@
-import { xrayConfig } from './ResultsParser';
 // playwright.config.ts
 import {FullConfig, Reporter, Suite} from '@playwright/test/reporter';
 import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
-import { xrayLabels } from './constants';
+import { testRailLabels, xrayLabels } from './constants';
 
 export type zebrunnerConfig = {
   projectKey: string;
@@ -90,7 +89,7 @@ class ZebRunnerReporter implements Reporter {
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
     
     const runTags = this.createRunTags(testsExecutions.results[0]);
-
+    console.log('runTags', runTags);
     let testRunTags = await this.addTestRunTags(this.testRunId, runTags); // broke - labels does not appear in the UI
     let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
@@ -344,7 +343,7 @@ class ZebRunnerReporter implements Reporter {
 
   createRunTags(run) {
     let tags = [];
-    if (Object.keys(run.xrayConfig).length === 0) {
+    if (Object.keys(run.xrayConfig).length === 0 && Object.keys(run.testRailConfig).length === 0) {
       return tags;
     }
 
@@ -354,6 +353,12 @@ class ZebRunnerReporter implements Reporter {
       }
     })
 
+    Object.keys(run.testRailConfig).forEach((item) => {
+      if (run.testRailConfig[item].key !== testRailLabels.CASE_ID) {
+        tags.push(run.testRailConfig[item]);
+      }
+    })
+    console.log('tags', tags);
     return tags;
   }
 }
