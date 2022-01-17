@@ -334,14 +334,14 @@ export default class ZebAgent {
       initiatedAt: options.startedAt,
       startedAt: options.startedAt,
       desiredCapabilities: {
-        browserName: options.browserCapabilities.browser.name,
-        browserVersion: options.browserCapabilities.browser.version,
-        platformName: options.browserCapabilities.os.name,
+        browserName: options.browserCapabilities.browser.name || 'n/a',
+        browserVersion: options.browserCapabilities.browser.version || 'n/a',
+        platformName: options.browserCapabilities.os.name || 'n/a',
       },
       capabilities: {
-        browserName: options.browserCapabilities.browser.name,
-        browserVersion: options.browserCapabilities.browser.version,
-        platformName: options.browserCapabilities.os.name,
+        browserName: options.browserCapabilities.browser.name || 'n/a',
+        browserVersion: options.browserCapabilities.browser.version || 'n/a',
+        platformName: options.browserCapabilities.os.name || 'n/a',
       },
       testIds: [],
     };
