@@ -23,7 +23,6 @@ const config: PlaywrightTestConfig = {
       use: {...devices['Desktop Safari']},
     },
   ],
-  testMatch:['pw_nested_testsuite.spec.ts'],
   reporter: [
     [
       './src/lib/zebReporter.ts',
