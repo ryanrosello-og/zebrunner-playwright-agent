@@ -17,7 +17,16 @@ const testRailLabels = {
   CASE_ID: "com.zebrunner.app/tcm.testrail.case-id",
 }
 
+const zephyrLabels = {
+  SYNC_ENABLED: "com.zebrunner.app/tcm.zephyr.sync.enabled",
+  SYNC_REAL_TIME: "com.zebrunner.app/tcm.zephyr.sync.real-time",
+  TEST_CYCLE_KEY: "com.zebrunner.app/tcm.zephyr.test-cycle-key",
+  JIRA_PROJECT_KEY: "com.zebrunner.app/tcm.zephyr.jira-project-key",
+  TEST_CASE_KEY: "com.zebrunner.app/tcm.zephyr.test-case-key",
+}
+
 export {
   xrayLabels,
   testRailLabels,
+  zephyrLabels,
 };

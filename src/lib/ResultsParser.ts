@@ -1,4 +1,4 @@
-import { testRailLabels, xrayLabels } from './constants';
+import { testRailLabels, xrayLabels, zephyrLabels } from './constants';
 import {zebrunnerConfig} from './zebReporter';
 
 export type testResult = {
@@ -25,22 +25,23 @@ export type testResult = {
   maintainer: string;
   xrayConfig: xrayConfig;
   testRailConfig: testRailConfig;
+  zephyrConfig: zephyrConfig;
 };
 
 export type xrayConfig = {
-  xrayTestKey: {
+  testKey: {
     key: string;
     value: string[];
   };
-  xrayExecutionKey: {
+  executionKey: {
     key: string;
     value: string;
   };
-  xrayEnableSync?: {
+  enableSync?: {
     key: string;
     value: boolean;
   };
-  xrayEnableRealTimeSync?: {
+  enableRealTimeSync?: {
     key: string;
     value: boolean;
   };
@@ -76,6 +77,29 @@ export type testRailConfig = {
     value: boolean;
   };
   includeAllTestCasesInNewRun: {
+    key: string;
+    value: boolean;
+  };
+  enableRealTimeSync: {
+    key: string;
+    value: boolean;
+  };
+} & {};
+
+export type zephyrConfig = {
+  testCycleKey: {
+    key: string;
+    value: string;
+  };
+  jiraProjectKey: {
+    key: string;
+    value: string;
+  };
+  testCaseKey: {
+    key: string;
+    value: string[];
+  };
+  enableSync: {
     key: string;
     value: boolean;
   };
@@ -234,12 +258,12 @@ export default class ResultsParser {
     let testResults: testResult[] = [];
     for (const test of tests) {
       let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
-      const {maintainer, xrayConfig, testRailConfig} = this.annotationsParser(test.annotations);
+      const {maintainer, xrayConfig, testRailConfig, zephyrConfig} = this.annotationsParser(test.annotations);
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
           name: `${suiteName} > ${test.title}`,
-          tags: this.getTestTags(test.title, xrayConfig, testRailConfig),
+          tags: this.getTestTags(test.title, xrayConfig, testRailConfig, zephyrConfig),
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime).toISOString(),
@@ -254,6 +278,7 @@ export default class ResultsParser {
           maintainer: maintainer.length > 0 ? maintainer[0].description : '',
           xrayConfig,
           testRailConfig,
+          zephyrConfig,
         });
       }
     }
@@ -264,7 +289,8 @@ export default class ResultsParser {
     const maintainer = annotations.filter(el => el.type === 'maintainer');
     const xrayConfig = this.parseXrayConfig(annotations);
     const testRailConfig = this.parseTestRailConfig(annotations);
-    return {maintainer, xrayConfig, testRailConfig};
+    const zephyrConfig = this.parseZephyrConfig(annotations);
+    return {maintainer, xrayConfig, testRailConfig, zephyrConfig};
   }
 
   parseTestRailConfig(annotations: {type: string, description: string}[]): testRailConfig {
@@ -338,7 +364,7 @@ export default class ResultsParser {
       }
     })
 
-    if (!this.isValidConfig(readyTestRailConfig, 'suiteId')) {
+    if (!this.isValidConfig(readyTestRailConfig, 'suiteId', 'caseId')) {
       return {};
     }
 
@@ -347,19 +373,19 @@ export default class ResultsParser {
 
   parseXrayConfig(annotations: {type: string, description: string}[]): xrayConfig {
     const readyXrayConfig = {
-      xrayExecutionKey: {
+      executionKey: {
         key: xrayLabels.EXECUTION_KEY,
         value: '',
       },
-      xrayTestKey: {
+      testKey: {
         key: xrayLabels.TEST_KEY,
         value: [],
       },
-      xrayDisableSync: {
+      disableSync: {
         key: xrayLabels.SYNC_ENABLED,
         value: true,
       },
-      xrayEnableRealTimeSync: {
+      enableRealTimeSync: {
         key: xrayLabels.SYNC_REAL_TIME,
         value: false,
       }
@@ -367,28 +393,78 @@ export default class ResultsParser {
 
     annotations.forEach((xray) => {
       if (xray.type === 'xrayExecutionKey') {
-        readyXrayConfig.xrayExecutionKey.value = xray.description;
+        readyXrayConfig.executionKey.value = xray.description;
       }
       if (xray.type === 'xrayTestKey') {
-        readyXrayConfig.xrayTestKey.value.push(xray.description);
+        readyXrayConfig.testKey.value.push(xray.description);
       }
       if (xray.type === 'xrayDisableSync') {
-        readyXrayConfig.xrayDisableSync.value = !JSON.parse(xray.description);
+        readyXrayConfig.disableSync.value = !JSON.parse(xray.description);
       } 
       if (xray.type === 'xrayEnableRealTimeSync') {
-        readyXrayConfig.xrayEnableRealTimeSync.value = JSON.parse(xray.description);
+        readyXrayConfig.enableRealTimeSync.value = JSON.parse(xray.description);
       }
     });
     
-    if (!this.isValidConfig(readyXrayConfig, 'xrayExecutionKey')) {
+    if (!this.isValidConfig(readyXrayConfig, 'executionKey', 'testKey')) {
       return {};
     }
 
     return readyXrayConfig;
   }
 
-  isValidConfig(config, option) {
-    return config[option].value ? true : false;
+  parseZephyrConfig(annotations: {type: string, description: string}[]): zephyrConfig {
+    const readyZephyrConfig = {
+      testCycleKey: {
+        key: zephyrLabels.TEST_CYCLE_KEY,
+        value: '',
+      },
+      jiraProjectKey: {
+        key: zephyrLabels.JIRA_PROJECT_KEY,
+        value: '',
+      },
+      testCaseKey: {
+        key: zephyrLabels.TEST_CASE_KEY,
+        value: [],
+      },
+      enableSync: {
+        key: zephyrLabels.SYNC_ENABLED,
+        value: true,
+      },
+      enableRealTimeSync: {
+        key: zephyrLabels.SYNC_REAL_TIME,
+        value: false,
+      },
+    }
+
+    annotations.forEach((zephyr) => {
+      if (zephyr.type === 'zephyrTestCycleKey') {
+        readyZephyrConfig.testCycleKey.value = zephyr.description;
+      }
+      if (zephyr.type === 'zephyrJiraProjectKey') {
+        readyZephyrConfig.jiraProjectKey.value = zephyr.description;
+      }
+      if (zephyr.type === 'zephyrTestCaseKey') {
+        readyZephyrConfig.testCaseKey.value.push(zephyr.description);
+      }
+      if (zephyr.type === 'zephyrDisableSync') {
+        readyZephyrConfig.enableSync.value = !JSON.parse(zephyr.description);
+      }
+      if (zephyr.type === 'zephyrEnableRealTimeSync') {
+        readyZephyrConfig.enableRealTimeSync.value = JSON.parse(zephyr.description);
+      }
+    })
+
+    if (!this.isValidConfig(readyZephyrConfig, 'testCycleKey', 'testCaseKey') || !this.isValidConfig(readyZephyrConfig, 'jiraProjectKey', 'testCaseKey')) {
+      return {};
+    }
+
+    return readyZephyrConfig;
+  }
+
+  isValidConfig(config, option, testOption) {
+    console.log(config);
+    return config[option].value && config[testOption].value.length !== 0 ? true : false;
   }
 
   cleanseReason(rawReason) {
@@ -404,13 +480,13 @@ export default class ResultsParser {
       : '';
   }
 
-  getTestTags(testTitle, xrayConfig, testRailConfig) {
+  getTestTags(testTitle, xrayConfig, testRailConfig, zephyrConfig) {
     let tags = testTitle.match(/@\w*/g) || [];
     if (Object.keys(xrayConfig).length !== 0) {
-      xrayConfig.xrayTestKey.value.forEach((el) => {
+      xrayConfig.testKey.value.forEach((el) => {
         if (el) {
           tags.push({
-            key: xrayConfig.xrayTestKey.key,
+            key: xrayConfig.testKey.key,
             value: el,
           });
         }
@@ -422,6 +498,17 @@ export default class ResultsParser {
         if (el) {
           tags.push({
             key: testRailConfig.caseId.key,
+            value: el,
+          });
+        }
+      })
+    }
+
+    if (Object.keys(zephyrConfig).length !== 0) {
+      zephyrConfig.testCaseKey.value.forEach((el) => {
+        if (el) {
+          tags.push({
+            key: zephyrConfig.testCaseKey.key,
             value: el,
           });
         }

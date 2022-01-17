@@ -4,7 +4,7 @@ import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
-import { testRailLabels, xrayLabels } from './constants';
+import { testRailLabels, xrayLabels, zephyrLabels } from './constants';
 
 export type zebrunnerConfig = {
   projectKey: string;
@@ -343,22 +343,28 @@ class ZebRunnerReporter implements Reporter {
 
   createRunTags(run) {
     let tags = [];
-    if (Object.keys(run.xrayConfig).length === 0 && Object.keys(run.testRailConfig).length === 0) {
+    if (Object.keys(run.xrayConfig).length === 0 && Object.keys(run.testRailConfig).length === 0 && Object.keys(run.zephyrConfig).length === 0) {
       return tags;
     }
 
     Object.keys(run.xrayConfig).forEach((item) => {
       if (run.xrayConfig[item].key !== xrayLabels.TEST_KEY) {
         tags.push(run.xrayConfig[item]);
-      }
-    })
+      };
+    });
 
     Object.keys(run.testRailConfig).forEach((item) => {
       if (run.testRailConfig[item].key !== testRailLabels.CASE_ID) {
         tags.push(run.testRailConfig[item]);
-      }
-    })
-    console.log('tags', tags);
+      };
+    });
+
+    Object.keys(run.zephyrConfig).forEach((item) => {
+      if (run.zephyrConfig[item].key !== zephyrLabels.TEST_CASE_KEY) {
+        tags.push(run.zephyrConfig[item]);
+      };
+    });
+
     return tags;
   }
 }
