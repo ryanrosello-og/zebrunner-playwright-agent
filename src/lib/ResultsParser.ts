@@ -463,7 +463,6 @@ export default class ResultsParser {
   }
 
   isValidConfig(config, option, testOption) {
-    console.log(config);
     return config[option].value && config[testOption].value.length !== 0 ? true : false;
   }
 
