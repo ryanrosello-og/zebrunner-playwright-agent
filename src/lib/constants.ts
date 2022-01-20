@@ -25,8 +25,15 @@ const zephyrLabels = {
   TEST_CASE_KEY: "com.zebrunner.app/tcm.zephyr.test-case-key",
 }
 
+const tcmEvents = {
+  TCM_RUN_OPTIONS: 'TCM_RUN_OPTIONS',
+  TCM_TEST_OPTIONS: 'TCM_TEST_OPTIONS',
+  SET_MAINTAINER: 'SET_MAINTAINER'
+}
+
 export {
   xrayLabels,
   testRailLabels,
   zephyrLabels,
+  tcmEvents,
 };

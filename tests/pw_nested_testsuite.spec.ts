@@ -1,42 +1,51 @@
 import {test, expect, Page} from '@playwright/test';
+import { ZebEmitter } from '../src/lib/ZebEmitter';
 const {firefox} = require('playwright');
 
+test.beforeAll(async () => {
+  const tcmRunOptions = [
+    {
+      xrayExecutionKey: 'execKey',
+      // xrayDisableSync: true,
+      // xrayEnableRealTimeSync: true
+    },
+    {
+      testRailSuiteId: 'testRailSuite',
+      // testRailRunId: '322',
+      // testRailRunName: 'testRailName',
+      // testRailMilestone: 'milestone',
+      // testRailAssignee: 'emarf',
+      // testRailDisableSync: true,
+      // testRailIncludeAll: true,
+      // testRailEnableRealTimeSync: true,
+    },
+    {
+      zephyrTestCycleKey: 'zephyr123',
+      zephyrJiraProjectKey: 'zephyr321',
+      // zephyrDisableSync: true,
+      // zephyrEnableRealTimeSync: true,
+    }
+  ]
+
+  ZebEmitter.addTcmRunOptions(tcmRunOptions);
+})
+
 test.describe('nested foo', () => {
-  test.beforeEach(async ({}, testInfo) => {
-    // ? Xray
-    // testInfo.annotations.push({type: 'xrayExecutionKey', description: 'execKey'}); // !mandatory
-    // testInfo.annotations.push({type: 'xrayDisableSync', description: 'true'}); // !optional
-    // testInfo.annotations.push({type: 'xrayEnableRealTimeSync', description: 'true'}); // !optional
-
-    // ? TestRail
-    // testInfo.annotations.push({type: 'testRailSuiteId', description: 'testRailSuite'}); // !mandatory
-    // testInfo.annotations.push({type: 'testRailRunId', description: '322'}); // !optional
-    // testInfo.annotations.push({type: 'testRailRunName', description: 'testRailName'}); // !optional
-    // testInfo.annotations.push({type: 'testRailMilestone', description: 'milestone'}); // !optional
-    // testInfo.annotations.push({type: 'testRailAssignee', description: 'emarf'}); // !optional
-    // testInfo.annotations.push({type: 'testRailDisableSync', description: 'true'}); // !optional
-    // testInfo.annotations.push({type: 'testRailIncludeAll', description: 'true'}); // !optional
-    // testInfo.annotations.push({type: 'testRailEnableRealTimeSync', description: 'true'}); // !optional
-
-    // ? Zephyr
-    // testInfo.annotations.push({type: 'zephyrTestCycleKey', description: 'zephyr123'}); // !mandatory 
-    // testInfo.annotations.push({type: 'zephyrJiraProjectKey', description: 'zephyr321'}); // !mandatory
-    // testInfo.annotations.push({type: 'zephyrDisableSync', description: 'true'}); // !optional
-    // testInfo.annotations.push({type: 'zephyrEnableRealTimeSync', description: 'true'}); // !optional
-  })
-
   test('test runnin in Firery fox @ff @smoke_test @slow', async ({page}, testInfo) => {
-    testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
-    // ? Xray
-    // testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey'});
-    // testInfo.annotations.push({type: 'xrayTestKey', description: 'testKey1'});
-    // ? TestRail
-    // testInfo.annotations.push({type: 'testRailCaseId', description: 'caseId'});
-    // testInfo.annotations.push({type: 'testRailCaseId', description: 'caseId1'});
-    // ? Zephyr
-    // testInfo.annotations.push({type: 'zephyrTestCaseKey', description: 'zephyr'});
-    // testInfo.annotations.push({type: 'zephyrTestCaseKey', description: 'zephyr1'});
-    
+    const tcmTestOptions = [
+      {
+        xrayTestKey: ['testKey', 'testKey1'],
+      },
+      {
+        testRailCaseId: ['caseId', 'caseId1'],
+      },
+      {
+        zephyrTestCaseKey: ['zephyr', 'zephyr1'],
+      },
+    ];
+    ZebEmitter.setMaintainer('emarf');
+    ZebEmitter.addTcmTestOptions(tcmTestOptions);
+
     const browser = await firefox.launch();
     const page1 = await browser.newPage();
     await page1.goto('https://example.com');
@@ -55,12 +64,14 @@ test.describe('nested foo', () => {
     });
 
     test('basic test @broke', async ({page}, testInfo) => {
-      testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
+      // testInfo.annotations.push({type: 'maintainer', description: 'emarf'});
       const title = page.locator('.navbar__inner .navbar__title');
       await expect(title).toHaveText('Playwright_broke');
     });
 
     test('my test1', async ({page}) => {
+      ZebEmitter.setMaintainer('emarf');
+      
       // Expect a title "to contain" a substring.
       await expect(page).toHaveTitle(/Playwright/);
 

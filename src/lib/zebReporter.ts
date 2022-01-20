@@ -4,7 +4,8 @@ import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
-import { testRailLabels, xrayLabels, zephyrLabels } from './constants';
+import { tcmEvents, testRailLabels, xrayLabels, zephyrLabels } from './constants';
+import { parseTcmRunOptions, parseTcmTestOptions } from './utils';
 
 export type zebrunnerConfig = {
   projectKey: string;
@@ -25,6 +26,7 @@ class ZebRunnerReporter implements Reporter {
   private zebAgent: ZebAgent;
   private slackReporter: SlackReporter;
   private testRunId: number;
+  private tcmConfig: {};
 
   onBegin(config: FullConfig, suite: Suite) {
     const configKeys = config.reporter.filter((f) => f[0].includes('zeb') || f[1]?.includes('zeb'));
@@ -42,6 +44,25 @@ class ZebRunnerReporter implements Reporter {
     this.config = config;
     this.suite = suite;
     this.zebAgent = new ZebAgent(this.zebConfig);
+  }
+
+  onStdOut(chunk, test, result) {
+    if (chunk.includes('connect') || chunk.includes('POST')) {
+      return;
+    }
+    const {type, data} = JSON.parse(chunk);
+    if (type === tcmEvents.TCM_RUN_OPTIONS) {
+      this.tcmConfig = parseTcmRunOptions(data);
+    }
+
+    if (type === tcmEvents.TCM_TEST_OPTIONS) {
+      const parseTestTcmOptions = parseTcmTestOptions(data, this.tcmConfig);
+      test.tcmTestOptions = parseTestTcmOptions;
+    }
+
+    if (type === tcmEvents.SET_MAINTAINER) {
+      test.maintainer = data
+    }
   }
 
   async onEnd() {
@@ -88,8 +109,7 @@ class ZebRunnerReporter implements Reporter {
     console.log('testRuns >>', this.testRunId);
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
     
-    const runTags = this.createRunTags(testsExecutions.results[0]);
-    console.log('runTags', runTags);
+    const runTags = this.createRunTags();
     let testRunTags = await this.addTestRunTags(this.testRunId, runTags); // broke - labels does not appear in the UI
     let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
@@ -341,30 +361,17 @@ class ZebRunnerReporter implements Reporter {
     }, {});
   }
 
-  createRunTags(run) {
+  createRunTags() {
     let tags = [];
-    if (Object.keys(run.xrayConfig).length === 0 && Object.keys(run.testRailConfig).length === 0 && Object.keys(run.zephyrConfig).length === 0) {
+    if (!this.tcmConfig) {
       return tags;
-    }
+    } 
 
-    Object.keys(run.xrayConfig).forEach((item) => {
-      if (run.xrayConfig[item].key !== xrayLabels.TEST_KEY) {
-        tags.push(run.xrayConfig[item]);
-      };
-    });
-
-    Object.keys(run.testRailConfig).forEach((item) => {
-      if (run.testRailConfig[item].key !== testRailLabels.CASE_ID) {
-        tags.push(run.testRailConfig[item]);
-      };
-    });
-
-    Object.keys(run.zephyrConfig).forEach((item) => {
-      if (run.zephyrConfig[item].key !== zephyrLabels.TEST_CASE_KEY) {
-        tags.push(run.zephyrConfig[item]);
-      };
-    });
-
+    Object.keys(this.tcmConfig).forEach((key) => {
+      Object.keys(this.tcmConfig[key]).forEach((el) => {
+        tags.push(this.tcmConfig[key][el]);
+      })
+    })
     return tags;
   }
 }
