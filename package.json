@@ -1,6 +1,6 @@
 {
   "name": "zebrunner-playwright-agent",
-  "version": "0.0.18",
+  "version": "0.0.20",
   "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
@@ -21,6 +21,7 @@
     "typescript": "^4.5.4"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@slack/web-api": "^6.5.1",
     "@supercharge/promise-pool": "^2.1.0",
     "axios": "^0.24.0",

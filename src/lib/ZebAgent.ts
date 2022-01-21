@@ -5,9 +5,8 @@ import Urls from './Urls';
 import * as path from 'path';
 import * as fs from 'fs';
 import {randomUUID} from 'crypto';
-import {testStep} from './ResultsParser';
+import {browserCapabilities, testStep} from './ResultsParser';
 import {zebrunnerConfig} from './zebReporter';
-
 const FormData = require('form-data');
 
 export default class ZebAgent {
@@ -115,7 +114,7 @@ export default class ZebAgent {
       name: string;
       className: string;
       methodName: string;
-      startedAt: string;
+      startedAt: Date;
       maintainer?: string;
       testCase?: string;
       labels?: {key: string; value: string}[];
@@ -137,17 +136,21 @@ export default class ZebAgent {
     payload: {
       result: 'PASSED' | 'FAILED' | 'ABORTED' | 'SKIPPED';
       reason?: string;
-      endedAt?: string;
+      endedAt?: Date;
     }
   ): Promise<AxiosResponse> {
-    let endpoint = this._urls.urlFinishTest(testRunId, testId);
-    let r = await this._api.put({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    try {
+      let endpoint = this._urls.urlFinishTest(testRunId, testId);
+      let r = await this._api.put({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async finishTestRun(
@@ -324,46 +327,56 @@ export default class ZebAgent {
 
   // this sends browser type to ZebRunner
   async startTestSession(options: {
-    browser: string;
-    startedAt: string;
+    browserCapabilities: browserCapabilities;
+    startedAt: Date;
     testRunId: number;
-    testIds: number[];
+    testIds: number[] | number;
   }): Promise<AxiosResponse> {
     let payload = {
       sessionId: randomUUID(),
       initiatedAt: options.startedAt,
       startedAt: options.startedAt,
       desiredCapabilities: {
-        browserName: options.browser,
-        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+        browserName: options.browserCapabilities.browser.name || 'n/a',
+        browserVersion: options.browserCapabilities.browser.version || 'n/a',
+        platformName: options.browserCapabilities.os.name || 'n/a',
       },
       capabilities: {
-        browserName: options.browser,
-        platformName: process.platform, // This is an assumption - platform type is not defined in the Playwright results
+        browserName: options.browserCapabilities.browser.name || 'n/a',
+        browserVersion: options.browserCapabilities.browser.version || 'n/a',
+        platformName: options.browserCapabilities.os.name || 'n/a',
       },
-      testIds: options.testIds,
+      testIds: [],
     };
 
-    const endpoint = this._urls.urlStartSession(options.testRunId);
-    let r = await this._api.post({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    payload.testIds.push(options.testIds);
+    try {
+      const endpoint = this._urls.urlStartSession(options.testRunId);
+      let r = await this._api.post({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async finishTestSession(
     sessionId: string,
     testRunId: number,
-    endedAt: string,
-    testIds: number[]
+    endedAt: Date,
+    testIds: number[] | number,
   ): Promise<AxiosResponse> {
     let payload = {
       endedAt: endedAt,
-      testIds: testIds,
+      testIds: [],
     };
+
+    payload.testIds.push(testIds);
+
     const endpoint = this._urls.urlFinishSession(testRunId, sessionId);
     let r = await this._api.put({
       url: endpoint.url,
