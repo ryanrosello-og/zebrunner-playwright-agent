@@ -292,19 +292,22 @@ export default class ZebAgent {
     let payload = {
       items,
     };
-
-    const endpoint = this._urls.urlTestExecutionLabel(testRunId, testId);
-    let r = await this._api.put({
-      url: endpoint.url,
-      payload: payload,
-      expectedStatusCode: endpoint.status,
-      config: this._header,
-    });
-    return r;
+    try {
+      const endpoint = this._urls.urlTestExecutionLabel(testRunId, testId);
+      let r = await this._api.put({
+        url: endpoint.url,
+        payload: payload,
+        expectedStatusCode: endpoint.status,
+        config: this._header,
+      });
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async addTestRunTags(testRunId: number, items: any[]): Promise<AxiosResponse> {
-    if (!items) return;
+    if (items.length === 0) return;
 
     let payload = {
       items,

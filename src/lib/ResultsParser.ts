@@ -26,6 +26,7 @@ export type testResult = {
     value: string;
   }[];
   steps?: testStep[];
+  maintainer: string;
 };
 
 export type testStep = {
@@ -174,11 +175,14 @@ export default class ResultsParser {
     const browserCapabilities = this.parseBrowserCapabilities(launchInfo);
     let testResults: testResult[] = [];
     for (const test of tests) {
+      // console.log('test', test.additionField);
+      let browser = test._testType?.fixtures[0]?.fixtures?.defaultBrowserType[0];
+
       for (const result of test.results) {
         testResults.push({
           suiteName: suiteName,
           name: `${suiteName} > ${test.title}`,
-          tags: this.getTestTags(test.title),
+          tags: this.getTestTags(test.title, test.tcmTestOptions),
           status: this.determineStatus(result.status),
           retry: result.retry,
           startedAt: new Date(result.startTime),
@@ -189,7 +193,7 @@ export default class ResultsParser {
           )}`,
           attachment: this.processAttachment(result.attachments),
           steps: this.getTestSteps(result.steps),
-          browserCapabilities 
+          maintainer: test.maintainer || 'anonymous',
         });
       }
     }
@@ -214,11 +218,24 @@ export default class ResultsParser {
       : '';
   }
 
-  getTestTags(testTitle) {
-    let tags = testTitle.match(/@\w*/g);
+  getTestTags(testTitle, tcmTestOptions) {
+    let tags = testTitle.match(/@\w*/g) || [];
 
-    if (tags) {
-      return tags.map((c) => ({key: 'tag', value: c.replace('@', '')}));
+    if (tcmTestOptions) {
+      tcmTestOptions.forEach((el) => {
+        tags.push(el);
+      })
+    }
+    
+    if (tags.length !== 0) {
+      return tags.map((c) => {
+        if (typeof c === 'string') {
+          return {key: 'tag', value: c.replace('@', '')}
+        }
+        if (typeof c === 'object') {
+          return c;
+        }
+      });
     }
     return null;
   }

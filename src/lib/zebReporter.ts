@@ -4,6 +4,8 @@ import ZebAgent from './ZebAgent';
 import ResultsParser, {testResult, testRun} from './ResultsParser';
 import {PromisePool} from '@supercharge/promise-pool';
 import SlackReporter from './SlackReporter';
+import { tcmEvents, testRailLabels, xrayLabels, zephyrLabels } from './constants';
+import { parseTcmRunOptions, parseTcmTestOptions } from './utils';
 
 
 export type zebrunnerConfig = {
@@ -25,7 +27,7 @@ class ZebRunnerReporter implements Reporter {
   private zebAgent: ZebAgent;
   private slackReporter: SlackReporter;
   private testRunId: number;
-  private test: any;
+  private tcmConfig: {};
 
   onBegin(config: FullConfig, suite: Suite) {
     const configKeys = config.reporter.filter((f) => f[0].includes('zeb') || f[1]?.includes('zeb'));
@@ -44,14 +46,32 @@ class ZebRunnerReporter implements Reporter {
     this.suite = suite;
     this.zebAgent = new ZebAgent(this.zebConfig);
   }
-  
+
+  onStdOut(chunk, test, result) {
+    if (chunk.includes('connect') || chunk.includes('POST')) {
+      return;
+    }
+    const {type, data} = JSON.parse(chunk);
+    if (type === tcmEvents.TCM_RUN_OPTIONS) {
+      this.tcmConfig = parseTcmRunOptions(data);
+    }
+
+    if (type === tcmEvents.TCM_TEST_OPTIONS) {
+      const parseTestTcmOptions = parseTcmTestOptions(data, this.tcmConfig);
+      test.tcmTestOptions = parseTestTcmOptions;
+    }
+
+    if (type === tcmEvents.SET_MAINTAINER) {
+      test.maintainer = data
+    }
+  }
+
   async onEnd() {
     if (!this.zebAgent.isEnabled) {
       console.log('Zebrunner agent disabled - skipped results upload');
       return;
     }
     await this.zebAgent.initialize();
-
     let resultsParser = new ResultsParser(this.suite, this.zebConfig);
     await resultsParser.parse();
     let parsedResults = await resultsParser.getParsedResults();
@@ -88,14 +108,10 @@ class ZebRunnerReporter implements Reporter {
     let testRunName = testResults.testRunName;
     await this.startTestRuns(runStartTime, testRunName);
     console.log('testRuns >>', this.testRunId);
-
-    let testRunTags = await this.addTestRunTags(this.testRunId, [
-      {
-        key: 'group',
-        value: 'Regression',
-      },
-    ]); // broke - labels does not appear in the UI
     let testsExecutions = await this.startTestExecutions(this.testRunId, testResults.tests);
+    
+    const runTags = this.createRunTags();
+    let testRunTags = await this.addTestRunTags(this.testRunId, runTags); // broke - labels does not appear in the UI
     let testTags = await this.addTestTags(this.testRunId, testsExecutions.results);
     let screenshots = await this.addScreenshots(this.testRunId, testsExecutions.results);
     let testArtifacts = await this.addTestArtifacts(this.testRunId, testsExecutions.results);
@@ -125,8 +141,9 @@ class ZebRunnerReporter implements Reporter {
         results: testsExecutions.results,
       },
       testRunTags: {
-        success: testRunTags.status === 204 ? 1 : 0,
-        errors: testRunTags.status !== 204 ? 1 : 0,
+        success: testRunTags && testRunTags.status === 204 ? 1 : 0,
+        errors: testRunTags && testRunTags.status !== 204 ? 1 : 0,
+        isEmpty: !testRunTags ? true : false,
       },
       testTags: {
         success: testTags.results.filter((f) => f && f.status === 204).length,
@@ -194,8 +211,12 @@ class ZebRunnerReporter implements Reporter {
   }
 
   async addTestRunTags(testRunId: number, tags: any[]) {
-    let r = await this.zebAgent.addTestRunTags(testRunId, tags);
-    return r;
+    try {
+      let r = await this.zebAgent.addTestRunTags(testRunId, tags);
+      return r;
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async addTestTags(testRunId: number, tests) {
@@ -257,10 +278,12 @@ class ZebRunnerReporter implements Reporter {
     const {results, errors} = await PromisePool.withConcurrency(this.zebAgent.concurrency)
       .for(tests)
       .process(async (test: testResult, index, pool) => {
+
         let testExecResponse = await this.zebAgent.startTestExecution(testRunId, {
           name: test.name,
           className: test.suiteName,
           methodName: test.name,
+          maintainer: test.maintainer,
           startedAt: test.startedAt,
         });
         let testId = testExecResponse.data.id;
@@ -334,6 +357,20 @@ class ZebRunnerReporter implements Reporter {
       });
 
     return {results, errors};
+  }
+
+  createRunTags() {
+    let tags = [];
+    if (!this.tcmConfig) {
+      return tags;
+    } 
+
+    Object.keys(this.tcmConfig).forEach((key) => {
+      Object.keys(this.tcmConfig[key]).forEach((el) => {
+        tags.push(this.tcmConfig[key][el]);
+      })
+    })
+    return tags;
   }
 }
 export default ZebRunnerReporter;
